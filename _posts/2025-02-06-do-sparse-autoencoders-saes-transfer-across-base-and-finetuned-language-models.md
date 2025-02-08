@@ -3,12 +3,15 @@ layout: post
 title: "Do Sparse Autoencoders (SAEs) transfer across base and finetuned language models?"
 date: 2025-02-06
 categories: [sae, mechanistic interpretability, model diffing]
+featured: true
+
+bibliography: 2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models.bib
 ---
 
 ---
 # **TLDR** (Executive Summary)
 
-- We explored **whether Sparse Autoencoders (SAEs)** can effectively transfer from base language models to their finetuned counterparts, focusing on two base models: [Gemma-2b](https://huggingface.co/google/gemma-2b) [@gemmateam2024gemmaopenmodelsbased] and [Mistral-7B-V0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1) [@jiang2023mistral7b](assets/bibliography/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models.bib) (we tested finetuned versions for coding and mathematics respectively)
+- We explored **whether Sparse Autoencoders (SAEs)** can effectively transfer from base language models to their finetuned counterparts, focusing on two base models: <d-cite key="gemmateam2024gemmaopenmodelsbased">[Gemma-2b](https://huggingface.co/google/gemma-2b)</d-cite> and [Mistral-7B-V0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1) [@jiang2023mistral7b](assets/bibliography/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models.bib) (we tested finetuned versions for coding and mathematics respectively)
 - In particular, we split our analysis into three steps:
     1. We analysed the similarity (**Cosine and Euclidian Distance**) of the residual activations, which was **highly correlated with the resulting transferability of the SAEs** for the two models.
     2. We computed several performance metrics (L0 Loss, Reconstruction CE Loss, Variance Explained) of the base SAEs on the fine-tuned models. Almost all metrics agreed on a **significant degradation of the SAE performance for the Gemma-2b** model, and **remained within a reasonable range for the Mistral-7B model**, indicating a much better transferability.
