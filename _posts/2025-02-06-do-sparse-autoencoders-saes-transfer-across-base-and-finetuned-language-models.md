@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: distill
 title: "Do Sparse Autoencoders (SAEs) transfer across base and finetuned language models?"
 date: 2025-02-06
 categories: [sae, mechanistic interpretability, model diffing]
