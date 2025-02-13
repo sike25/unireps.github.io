@@ -124,7 +124,7 @@ Lastly, we want to remark how this kind of study derives its importance from the
 
 # 2. Problem setup
 
-In choosing finetuned models to work with, we tried to strike a balance between the potential relevance of these models (how many people will actually use similar models), and the availability of pre-trained SAEs from the [SAELens](https://jbloomaus.github.io/SAELens/)<d-cite key="bloom2024saetrainingcodebase"></d-cite> library we used (due to the time constraints for the AISF project we decided not to train our own SAEs). So, we arrived at the following models and their finetunes:
+In choosing finetuned models to work with, we tried to strike a balance between the potential relevance of these models (how many people will actually use similar models), and the availability of pre-trained SAEs from the [SAELens](https://jbloomaus.github.io/SAELens/)<d-cite key="bloom2024saetrainingcodebase"></d-cite> library we used. So, we arrived at the following models and their finetunes:
 
 1. Gemma-2b (v1) -> [Gemma-2b-it-finetuned-python-codes](https://huggingface.co/shahdishank/gemma-2b-it-finetune-python-codes)<d-cite key="gemmateam2024gemmaopenmodelsbased"></d-cite> finetune on **Python code** by Dishank Shah.
 2. Mistral-7B (v0.1) -> [MetaMath-Mistral-7B](https://huggingface.co/meta-math/MetaMath-Mistral-7B)<d-cite key="jiang2023mistral7b"></d-cite> finetune on **math problems** by Meta from their [MetaMath paper](https://arxiv.org/abs/2309.12284)<d-cite key="yu2024metamath"></d-cite> by Yu et al.
