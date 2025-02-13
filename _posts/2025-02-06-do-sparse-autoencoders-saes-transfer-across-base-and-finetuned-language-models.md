@@ -9,7 +9,7 @@ authors:
   - name: Taras Kutsyk
     url: "https://www.linkedin.com/in/taras-kutsyk-135006212/"
     affiliations:
-      name: University of Aquila, Aquila
+      name: University of L'Aquila, L'Aquila
   - name: Tommaso Mencattini
     url: "https://www.linkedin.com/in/tommasomencattini/"
     affiliations:
@@ -21,7 +21,6 @@ authors:
 
 bibliography: 2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models.bib
 
-
 toc:
   - name: "1. Introduction and motivation"
     subsections:
@@ -29,7 +28,7 @@ toc:
       - name: "1.2 Finetuning models is a challenge to AI safety"
   - name: "2. Problem setup"
     subsections:
-      - name: "2.1 Studying \"default\" transferability"
+      - name: '2.1 Studying "default" transferability'
       - name: "2.2 Evaluating SAEs performance"
   - name: "3. How similar are residual activations of finetuned models?"
   - name: "4. How well do the base SAEs work on the finetuned models?"
@@ -47,19 +46,17 @@ toc:
       - name: "6.1 Conclusions"
       - name: "6.2 Limitations"
   - name: "Appendix"
-
 ---
 
 # **TLDR** (Executive Summary)
 
 - We explored **whether Sparse Autoencoders (SAEs)** can effectively transfer from base language models to their finetuned counterparts, focusing on two base models: [Gemma-2b](https://huggingface.co/google/gemma-2b) <d-cite key="gemmateam2024gemmaopenmodelsbased"></d-cite> and [Mistral-7B-V0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1) <d-cite key="jiang2023mistral7b"></d-cite> (we tested finetuned versions for coding and mathematics respectively)
 - In particular, we split our analysis into three steps:
-    1. We analysed the similarity (**Cosine and Euclidian Distance**) of the residual activations, which was **highly correlated with the resulting transferability of the SAEs** for the two models.
-    2. We computed several performance metrics (L0 Loss, Reconstruction CE Loss, Variance Explained) of the base SAEs on the fine-tuned models. Almost all metrics agreed on a **significant degradation of the SAE performance for the Gemma-2b** model, and **remained within a reasonable range for the Mistral-7B model**, indicating a much better transferability.
-    3. We took a further step by operationalizing the idea of transferability of SAE from base models to fine-tuned models by applying an [approach from Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features#phenomenology-universality)<d-cite key="bricken2023monosemanticity"></d-cite> for studying feature universality through **feature activation similarity** and **feature logit similarity**. These similarity scores were mostly consistent with the results from the previous step, albeit with one caveat for the Gemma-2b model, suggesting that **some SAE features may still transfer** even if the overall SAE performance is poor for the finetuned model.
+  1. We analysed the similarity (**Cosine and Euclidian Distance**) of the residual activations, which was **highly correlated with the resulting transferability of the SAEs** for the two models.
+  2. We computed several performance metrics (L0 Loss, Reconstruction CE Loss, Variance Explained) of the base SAEs on the fine-tuned models. Almost all metrics agreed on a **significant degradation of the SAE performance for the Gemma-2b** model, and **remained within a reasonable range for the Mistral-7B model**, indicating a much better transferability.
+  3. We took a further step by operationalizing the idea of transferability of SAE from base models to fine-tuned models by applying an [approach from Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features#phenomenology-universality)<d-cite key="bricken2023monosemanticity"></d-cite> for studying feature universality through **feature activation similarity** and **feature logit similarity**. These similarity scores were mostly consistent with the results from the previous step, albeit with one caveat for the Gemma-2b model, suggesting that **some SAE features may still transfer** even if the overall SAE performance is poor for the finetuned model.
 - Overall, our results agree with [previous work that studied Instruct models](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite>. That is, SAEs transferability seems to be model-dependent and sensitive to the finetuning process.
 - We make our [code repository public](https://github.com/tommasomncttn/SAE-Transferability) to facilitate future work in this direction.
-
 
 ---
 
@@ -67,34 +64,33 @@ toc:
 
 ## 1.1 What are SAEs and why do we care about them
 
-We find ourselves in a world where we have machines that speak fluently dozens of languages, can do a wide variety of tasks like programming at a reasonable level, **and we have no idea how they do it!** This is a standard **mechanistic interpretability** (a.k.a. mech interp) pitch - a field that is trying to **express neural networks’ behaviours as human-understandable algorithms**, i.e. **reverse engineer** algorithms learned by a neural network (or a model, in short). The main motivation is that even though we know the exact form of computation being done by the model to transform the input (e.g. text prompt) to the output (e.g. text answer), we don’t know *why* this computation is doing what it’s doing, and this is a major concern from a standpoint of AI Safety. The model can perform the computation because it’s genuinely trained to perform the task well, or because it learned that doing the task well correlates with its other learned goals like gaining more power and resources. Without understanding the computation, we have no direct way of distinguishing between the two.
+We find ourselves in a world where we have machines that speak fluently dozens of languages, can do a wide variety of tasks like programming at a reasonable level, **and we have no idea how they do it!** This is a standard **mechanistic interpretability** (a.k.a. mech interp) pitch - a field that is trying to **express neural networks’ behaviours as human-understandable algorithms**, i.e. **reverse engineer** algorithms learned by a neural network (or a model, in short). The main motivation is that even though we know the exact form of computation being done by the model to transform the input (e.g. text prompt) to the output (e.g. text answer), we don’t know _why_ this computation is doing what it’s doing, and this is a major concern from a standpoint of AI Safety. The model can perform the computation because it’s genuinely trained to perform the task well, or because it learned that doing the task well correlates with its other learned goals like gaining more power and resources. Without understanding the computation, we have no direct way of distinguishing between the two.
 
-The solution proposed by mechanistic interpretability is closely analogous to reverse engineering ordinary computer programs from their compiled binaries. In both cases, we have an intrinsically non-interpretable model of computation - a sequence of binary instructions performed on a string of 0s and 1s, and the (mathematical) function of the neural network's architecture applied with its learned parameters (weights)<d-footnote>This is a pretty important analogy to understand and you can read more about it in [this Anthropic post](https://transformer-circuits.pub/2022/mech-interp-essay/index.html)<d-cite key="Olah_2022"></d-cite> where it's explained better. </d-footnote>. Programmers know that a natural way to think about computer programs is mapping ***variables*** into other variables (or new states of existing variables), starting from some pre-initialized state. So, reverse engineering complied binaries boils down to (oversimplifying) identifying binary memory segments that correspond to variables, tracking how these segments change as the program is being executed, coming up with the explanations of the purpose of these variables, and ultimately arriving at the replication of the program source code - a sequence of human-understandable instructions.
+The solution proposed by mechanistic interpretability is closely analogous to reverse engineering ordinary computer programs from their compiled binaries. In both cases, we have an intrinsically non-interpretable model of computation - a sequence of binary instructions performed on a string of 0s and 1s, and the (mathematical) function of the neural network's architecture applied with its learned parameters (weights)<d-footnote>This is a pretty important analogy to understand and you can read more about it in [this Anthropic post](https://transformer-circuits.pub/2022/mech-interp-essay/index.html)<d-cite key="Olah_2022"></d-cite> where it's explained better. </d-footnote>. Programmers know that a natural way to think about computer programs is mapping **_variables_** into other variables (or new states of existing variables), starting from some pre-initialized state. So, reverse engineering complied binaries boils down to (oversimplifying) identifying binary memory segments that correspond to variables, tracking how these segments change as the program is being executed, coming up with the explanations of the purpose of these variables, and ultimately arriving at the replication of the program source code - a sequence of human-understandable instructions.
 
 But what makes us think that the same is possible for neural networks, especially the ones as large as the current Large Language Models (LLMs)? In particular, why should we even expect that neural networks solve tasks similarly to humans, and thus adopt the same "variable-centered" model of computation? While the proof-of-existence for the first question appeared relatively early (see [Circuits thread by Chris Olah et al.](https://distill.pub/2020/circuits/zoom-in/)<d-cite key="olah2020zoom"></d-cite> for CNNs or a [more recent work by Neel Nanda et al.](https://arxiv.org/abs/2301.05217)<d-cite key="nanda2023progressmeasuresgrokkingmechanistic"></d-cite> for language models), the second question is a more general claim, and thus requires more general evidence. The first fundamental work that provided such evidence was the ["Towards Monosemanticity" paper by Anthropic](https://transformer-circuits.pub/2023/monosemantic-features)<d-cite key="bricken2023monosemanticity"></d-cite>, which introduced Sparse Autoencoders (SAEs) for interpreting the language models' activations. The activations are any intermediate state of the models' computation, such as residual stream, MLP layers etc. and can be seen as analogous to a program's memory state. And just as the program's memory state can be decomposed into variables, the **main purpose of SAEs is to decompose models' activations into features**.
 
-A feature, in general, is a fuzzy term, and you can find some good attempts to define it [here](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=BQds7CQ8ytq2rolt7p0XQPbt)<d-cite key="nanda_2022"></d-cite>. For this post we'll use the analogy with variables and link it to a very general definition of a feature as "*a* *property of the input*". The link is pretty natural: **the types and the number of variables a programmer needs to solve a task depends on the task itself** (i.e. on the problem input). So for a model it would seem reasonable if it used different kinds of variables/features depending on its input: you don't need a feature "this line is inside a for-loop in Python" in a poetry text, or a feature "this word rhymes with ‘sunset’" in the Python code. And given that models have a finite amount of parameters (which limits a total number of variables they can use), we should expect that they will utilize this kind of input-specificity to use as many unique features as they need to perform a specific task.
+A feature, in general, is a fuzzy term, and you can find some good attempts to define it [here](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=BQds7CQ8ytq2rolt7p0XQPbt)<d-cite key="nanda_2022"></d-cite>. For this post we'll use the analogy with variables and link it to a very general definition of a feature as "_a_ _property of the input_". The link is pretty natural: **the types and the number of variables a programmer needs to solve a task depends on the task itself** (i.e. on the problem input). So for a model it would seem reasonable if it used different kinds of variables/features depending on its input: you don't need a feature "this line is inside a for-loop in Python" in a poetry text, or a feature "this word rhymes with ‘sunset’" in the Python code. And given that models have a finite amount of parameters (which limits a total number of variables they can use), we should expect that they will utilize this kind of input-specificity to use as many unique features as they need to perform a specific task.
 
 Why are sparse autoencoders called sparse? It's actually deeply linked with the idea from the previous paragraph: if you want to use many features in a limited activation space (limited by a number of neurons), you have to exploit the fact that **for any input, most of the features will not be there**. So given that modern language models are trained to predict a next token in a huge variety of possible inputs, we should expect that any feature learned by the model will be **sparse**, i.e. it **will be used by the model only for a small fraction of all possible inputs**.
 
-But wait, how is it even possible for a model to learn input-specific features if it has a low-dimensional activations space (where dimension equals the number of neurons) but a very high-dimensional input space? The answer is ***superposition*** - an idea of exploiting feature sparsity to store more features than dimensions in the activation space. It has a rich mathematical background and we invite an unfamiliar reader to learn more about it in the ["Toy Models of Superposition" paper by Elhage et al.](https://transformer-circuits.pub/2022/toy_model/index.html)<d-cite key="elhage2022superposition"></d-cite>
+But wait, how is it even possible for a model to learn input-specific features if it has a low-dimensional activations space (where dimension equals the number of neurons) but a very high-dimensional input space? The answer is **_superposition_** - an idea of exploiting feature sparsity to store more features than dimensions in the activation space. It has a rich mathematical background and we invite an unfamiliar reader to learn more about it in the ["Toy Models of Superposition" paper by Elhage et al.](https://transformer-circuits.pub/2022/toy_model/index.html)<d-cite key="elhage2022superposition"></d-cite>
 
-Coming back to SAEs, they were introduced with all of these ideas in mind to *solve superposition*, i.e. to recover more than *n* features in an *n*-dimensional activation space of a model. How are they supposed to do it? The answer is once again in the name - *autoencoders*, which means that SAEs are neural networks with the "autoencoder" architecture, which is illustrated in a diagram below (borrowed from the great [Adam Karvonen's post](https://adamkarvonen.github.io/machine_learning/2024/06/11/sae-intuitions.html)<d-cite key="Karvonen_2024"></d-cite>):
+Coming back to SAEs, they were introduced with all of these ideas in mind to _solve superposition_, i.e. to recover more than _n_ features in an _n_-dimensional activation space of a model. How are they supposed to do it? The answer is once again in the name - _autoencoders_, which means that SAEs are neural networks with the "autoencoder" architecture, which is illustrated in a diagram below (borrowed from the great [Adam Karvonen's post](https://adamkarvonen.github.io/machine_learning/2024/06/11/sae-intuitions.html)<d-cite key="Karvonen_2024"></d-cite>):
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/sae.png" alt="My Image" width="500" />
 </div>
 
-
-So the model activations are "encoded" into a high-dimensional vector of feature activations (top right, note that it always has many more elements than the model's input), and this high-dimensional vector (a.k.a. "code") is "decoded" back to reconstruct the input, hence the name "autoencoder". We advise the reader to take a quick look at the ["Towards monosematicity" appendix](https://transformer-circuits.pub/2023/monosemantic-features#appendix-autoencoder)<d-cite key="bricken2023monosemanticity"></d-cite> where this architecture is presented mathematically<d-footnote>Note that it's different from the diagram in two ways: adding biases vectors **b** and using a transposed encoder/decoder matrix compared to what is seen in the diagram.</d-footnote>, but the core point to understand is that we're interested in the right part of the above diagram: **how the reconstructed activations are decomposed into a linear combination of feature vectors** from the Decoder matrix (with the weights of a linear combination equal to SAE *feature activations*, due to how matrix-vector multiplication works). Mathematically, it means that for each input $$x^j$$ (which is the model's activation vector at the place where we 'attach' the SAE - residual layer, hidden head activations etc.), we're looking to express it in the following form:
+So the model activations are "encoded" into a high-dimensional vector of feature activations (top right, note that it always has many more elements than the model's input), and this high-dimensional vector (a.k.a. "code") is "decoded" back to reconstruct the input, hence the name "autoencoder". We advise the reader to take a quick look at the ["Towards monosematicity" appendix](https://transformer-circuits.pub/2023/monosemantic-features#appendix-autoencoder)<d-cite key="bricken2023monosemanticity"></d-cite> where this architecture is presented mathematically<d-footnote>Note that it's different from the diagram in two ways: adding biases vectors **b** and using a transposed encoder/decoder matrix compared to what is seen in the diagram.</d-footnote>, but the core point to understand is that we're interested in the right part of the above diagram: **how the reconstructed activations are decomposed into a linear combination of feature vectors** from the Decoder matrix (with the weights of a linear combination equal to SAE _feature activations_, due to how matrix-vector multiplication works). Mathematically, it means that for each input $$x^j$$ (which is the model's activation vector at the place where we 'attach' the SAE - residual layer, hidden head activations etc.), we're looking to express it in the following form:
 
 $$\mathbf{x}^j \approx \mathbf{b} + \sum_i f_i(\mathbf{x}^j) \mathbf{d}_i$$
 
 where $$f_i(\mathbf{x}) = \text{ReLU}\left( \mathbf{W}_{enc} \mathbf{x} + \mathbf{b}_{enc} \right)_i$$ are the feature activations that are computed in the left ("encoder") part of the diagram, and $$\mathbf{d}_i$$ are the rows of the decoder matrix (or columns, if you take the transpose and multiply from the other side). Note that the diagram omits bias vectors $$\mathbf{b}$$ for simplicity, but conceptually they don't change much: instead of decomposing the activation space, we're decomposing a translation of that space by a fixed vector (because this is just easier for an SAE to learn).
 
-If you think about it, it's exactly what we hoped to do in an analogy with decomposing program memory into variable names! The variables are now features - **vectors (directions) in the activation space**. And *if* the autoencoder is doing a good job at reconstructing the input, we can expect that this decomposition (and hence the features) to make sense!
+If you think about it, it's exactly what we hoped to do in an analogy with decomposing program memory into variable names! The variables are now features - **vectors (directions) in the activation space**. And _if_ the autoencoder is doing a good job at reconstructing the input, we can expect that this decomposition (and hence the features) to make sense!
 
-The last part is tricky though. Unlike variables that are deliberately used by humans to write sensible algorithms, there is no reason to expect that the features we recover with an SAE will be *interpretable* in a sense that a human can understand on which inputs they activate and can predict their "roles" based on that (e.g. which tokens they help to predict). But this is where the *sparsity* condition comes in: we don't only want an SAE to reconstruct the input from a high-dimensional feature-activation representation, **but we also want this representation to be sparse**, i.e. have only a handful of non-zero feature activations at a time. We already touched on the reason for this - the hope is that we'll be able to recover the "true" features used by the model in this way<d-footnote>It's quite a slippery area to consider the logical relationship between the feature quality of being "truly used" by the model (analogously to correctly recovered variables from the compiled binary) and its interpretability. If the model came up with some genius way to solve a particular task using features no human can comprehend, would they still be considered as interpretable? The answer can vary from "no" to "kind of yes", because it can be argued that humans with their evolutionally developed problem-solving skills can eventually understand (i.e. interpret) how things work, even though it may not be obvious at a first glance. It's also discussed by Neel Nanda [here](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=dzkF4Sh89hg1GUJj5h2TiGVx)<d-cite key="nanda_2022"></d-cite> </d-footnote>. And the way this is achieved is by imposing an L1-loss penalty on the feature activation vector, which intuitively incentivizes the model to not learn any features unless they are really useful in reconstructing the input<d-footnote>There's also a better justified mathematical reason for sparsity, greatly explained [here](http://ufldl.stanford.edu/tutorial/unsupervised/SparseCoding/)<d-cite key="Ng"></d-cite>. Essentially, by learning to decompose the model's activation space into feature activations, we're trying to find an overcomplete basis of feature directions (a basis with more than n vectors in an n-dimensional space), which is impossible to do without imposing some additional criteria. The ["Toy Models of Superposition"](https://transformer-circuits.pub/2022/toy_model/index.html)<d-cite key="elhage2022superposition"></d-cite> is also incredibly helpful to refine one's intuition about this. </d-footnote>.
+The last part is tricky though. Unlike variables that are deliberately used by humans to write sensible algorithms, there is no reason to expect that the features we recover with an SAE will be _interpretable_ in a sense that a human can understand on which inputs they activate and can predict their "roles" based on that (e.g. which tokens they help to predict). But this is where the _sparsity_ condition comes in: we don't only want an SAE to reconstruct the input from a high-dimensional feature-activation representation, **but we also want this representation to be sparse**, i.e. have only a handful of non-zero feature activations at a time. We already touched on the reason for this - the hope is that we'll be able to recover the "true" features used by the model in this way<d-footnote>It's quite a slippery area to consider the logical relationship between the feature quality of being "truly used" by the model (analogously to correctly recovered variables from the compiled binary) and its interpretability. If the model came up with some genius way to solve a particular task using features no human can comprehend, would they still be considered as interpretable? The answer can vary from "no" to "kind of yes", because it can be argued that humans with their evolutionally developed problem-solving skills can eventually understand (i.e. interpret) how things work, even though it may not be obvious at a first glance. It's also discussed by Neel Nanda [here](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=dzkF4Sh89hg1GUJj5h2TiGVx)<d-cite key="nanda_2022"></d-cite> </d-footnote>. And the way this is achieved is by imposing an L1-loss penalty on the feature activation vector, which intuitively incentivizes the model to not learn any features unless they are really useful in reconstructing the input<d-footnote>There's also a better justified mathematical reason for sparsity, greatly explained [here](http://ufldl.stanford.edu/tutorial/unsupervised/SparseCoding/)<d-cite key="Ng"></d-cite>. Essentially, by learning to decompose the model's activation space into feature activations, we're trying to find an overcomplete basis of feature directions (a basis with more than n vectors in an n-dimensional space), which is impossible to do without imposing some additional criteria. The ["Toy Models of Superposition"](https://transformer-circuits.pub/2022/toy_model/index.html)<d-cite key="elhage2022superposition"></d-cite> is also incredibly helpful to refine one's intuition about this. </d-footnote>.
 
 ### 1.1.1 SAE features for AI Safety
 
@@ -103,20 +99,14 @@ The traditional view in mech interp has been that **one cannot interpret the mod
 So what does this mean for AI Safety? We’ll cite the Anthropic team’s view on this topic (layed out in their [“Interpretability Dreams”](https://transformer-circuits.pub/2023/interpretability-dreams/index.html#safety)<d-cite key="Olah_2023"></d-cite> post and in the ["Strategic Picture" section](https://transformer-circuits.pub/2022/toy_model/index.html#strategic)<d-cite key="elhage2022superposition"></d-cite> of the Toy Models paper):
 
 > We'd like a way to have confidence that models will never do certain behaviors such as "deliberately deceive" or "manipulate." Today, it's unclear how one might show this, but we believe a promising tool would be the ability to identify and enumerate over all features.
-> 
 
 > Ultimately we want to say that a model doesn't implement some class of behaviors. Enumerating over all features makes it easy to say a feature doesn't exist (e.g. "there is no 'deceptive behavior' feature") but that isn't quite what we want. We expect models that need to represent the world to represent unsavory behaviors. But it may be possible to build more subtle claims such as "all 'deceptive behavior' features do not participate in circuits X, Y and Z.”
-> 
 
 Summarizing, the hope is to be able to prove statements of the following form:
 
-
 <div style="text-align: center;">
-  <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/eq.png" alt="My Image" width="300" />
+  <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/eq.png" alt="My Image" width="500" />
 </div>
-
-
-(borrowed as well from the [Adam Karvonen's post](https://adamkarvonen.github.io/machine_learning/2024/06/11/sae-intuitions.html)<d-cite key="Karvonen_2024"></d-cite>)
 
 ## 1.2 Finetuning models is a challenge to AI safety - SAEs to the rescue?
 
@@ -124,7 +114,7 @@ After outlining the procedure behind SAE-interpretability, we can answer a more 
 
 Nevertheless, reality is often rougher than abstraction, and mechanistic interpretability suffers from one big problem: once we crack the interpretation of a model, we are only able to decode what is going on inside **a singular, particular model, and not all models with the same architecture and different weights**. Luckily, to have a model that shows emergent abilities, [we need a lot of compute](https://epochai.org/blog/compute-trends)<d-cite key="computetrends"></d-cite>, which remarkably restricts the Pareto frontier of competitive models and therefore the number of pre-trained models that we need to interpret. Therefore, one could think that if we manage to get some good SAE-interpreters for these few, we will be done. This may not be true! While indeed there are few state-of-the-art models, there are tons of finetuned versions of them ([hugging face reached 1 million of models](https://twitter.com/ClementDelangue/status/1839375655688884305?ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%5E1839375655688884305%7Ctwgr%5Eb537ad0b54dfc2d9ec69e2b01a337c5b0ce9d4e9%7Ctwcon%5Es1_&ref_url=https%3A%2F%2Freadwrite.com%2Fai-startup-hugging-face-reaches-one-million-downloadable-ai-models-thats-a-lot-you-have-never-heard-of%2F)), which are quite cheap to obtain compared to pretraining. **If a simple finetuning will make the model uninterpretable, then we might be in danger**. This could be the case, as [previous studies](https://arxiv.org/abs/2310.02949)<d-cite key="yang2023shadowalignmenteasesubverting"></d-cite> showed that alignment can be erased with a small finetuning. Then we ask ourselves:
 
-*Is the interpretability of a model as weak as alignment to finetuning?*
+_Is the interpretability of a model as weak as alignment to finetuning?_
 
 In this post, we try to answer these questions and extend the positive results derived from a similar study by [Kissane et al.](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite>, where SAEs for the residual stream have been shown to be easily transferable (at the cost of some finetuning).
 
@@ -166,17 +156,16 @@ We then loaded the following SAEs for these models from SAELens (SAE layer numbe
   </tbody>
 </table>
 
-
 Two important things to note:
 
-- Gemma-2b SAE was trained on the *base* Gemma-2b model, while our Gemma-2b finetune was obtained from the *instruct* model, so there was one more "finetuning step" compared to the Mistral-7B case.
-- Both finetunes that we used are *full* finetunes (with respect to the base model), i.e. no layer was frozen during the finetuning process. This is important for our SAE study, because all SAEs would trivially generalize (in terms of their reconstruction quality) if they were applied at the layer where activations are not affected a priori by the finetuning process.
+- Gemma-2b SAE was trained on the _base_ Gemma-2b model, while our Gemma-2b finetune was obtained from the _instruct_ model, so there was one more "finetuning step" compared to the Mistral-7B case.
+- Both finetunes that we used are _full_ finetunes (with respect to the base model), i.e. no layer was frozen during the finetuning process. This is important for our SAE study, because all SAEs would trivially generalize (in terms of their reconstruction quality) if they were applied at the layer where activations are not affected a priori by the finetuning process.
 
 ## 2.1 Studying "default" transferability
 
-Similarly to what [Kissane et al.](https://www.lesswrong.com/users/connor-kissane?from=post_header)<d-cite key="sae_finetuning"></d-cite> did with the instruct models, we'll study the SAE transferability "by default". That is, we'll take an SAE trained on the base model, and apply it to the finetuned model to see if it maintains its performance (operationalized below). We won't do any additional finetuning of our SAEs (on the activations from the finetune model), but as the same results from [Kissane et al.](https://www.lesswrong.com/users/connor-kissane?from=post_header)<d-cite key="sae_finetuning"></d-cite> indicate: even when SAEs do not transfer by default, they can be finetuned relatively cheaply to recover their performance.
+Similarly to what [Kissane et al.](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite> did with the instruct models, we'll study the SAE transferability "by default". That is, we'll take an SAE trained on the base model, and apply it to the finetuned model to see if it maintains its performance (operationalized below). We won't do any additional finetuning of our SAEs (on the activations from the finetune model), but as the same results from [Kissane et al.](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite> indicate: even when SAEs do not transfer by default, they can be finetuned relatively cheaply to recover their performance.
 
-Prior to evaluating the SAEs' performance, we computed different similarity metrics for residual stream activations at the specific layer our SAEs are used for. The goal was to obtain some sort of a prior probability that our SAEs will transfer to the finetune model: the more similar the activations are, the higher is the (expected) probability that our SAEs will transfer. On the one hand, this analysis can be used as a *first step to select a fine-tuned model* from the thousands available on Hugging-Face. On the other hand, further studies can try to analyze *whether the phenomenon of SAE transferability actually correlates with the difference between activations* of the base and fine-tuned models (which we treat here only as an unproven heuristic).
+Prior to evaluating the SAEs' performance, we computed different similarity metrics for residual stream activations at the specific layer our SAEs are used for. The goal was to obtain some sort of a prior probability that our SAEs will transfer to the finetune model: the more similar the activations are, the higher is the (expected) probability that our SAEs will transfer. On the one hand, this analysis can be used as a _first step to select a fine-tuned model_ from the thousands available on Hugging-Face. On the other hand, further studies can try to analyze _whether the phenomenon of SAE transferability actually correlates with the difference between activations_ of the base and fine-tuned models (which we treat here only as an unproven heuristic).
 
 ## 2.2 Evaluating SAEs performance
 
@@ -184,15 +173,15 @@ Designing rigorous approaches to evaluate the SAEs' performance is an open probl
 
 1. **L0 loss**, namely the number of non-zero values in the feature activations vector. If the features retain their sparsity, we should expect L0 loss to be low compared to the total number of features, with the fraction being usually less than 1% ($$\frac{L_0}{N_{\text{features}}} < 0.01$$)
 2. **Reconstruction Cross-Entropy (CE) loss** (a.k.a. substitution loss) which is computed as follows:
-    1. Run the model up to the layer where we apply the SAE, get this layer's activations
-    2. Run the activations through the SAEs, obtaining the reconstructions
-    3. **Substitute** the original activations with the reconstructed activations, continue the forward pass of the model, and get the corresponding cross-entropy loss
+   1. Run the model up to the layer where we apply the SAE, get this layer's activations
+   2. Run the activations through the SAEs, obtaining the reconstructions
+   3. **Substitute** the original activations with the reconstructed activations, continue the forward pass of the model, and get the corresponding cross-entropy loss
 3. **Variance explained**, is one of the standard ways to measure the difference of original activations and the activations reconstructed by the SAE. Specifically, we'll use $$R^2$$ score a.k.a. [Coefficient of determination](https://en.wikipedia.org/wiki/Coefficient_of_determination)
 4. **Feature density histograms**: [as explained by Joseph Bloom](https://www.lesswrong.com/posts/f9EgfLSurAiqRJySD/open-source-sparse-autoencoders-for-all-residual-stream#Why_can_training_Sparse_AutoEncoders_be_difficult__)<d-cite key="jbloom_lesswrong"></d-cite>, ideally the features should be "within good sparsity range": **not too sparse** (e.g. when the features are "dead" and never activate) and **not too dense** (e.g. activating in more than 10% of the inputs). In both edge cases, anecdotally the features are mostly uninterpretable. One (rather qualitative) way to check this is to plot feature histograms:
-    1. Run a given sample of tokens through the model, and get the SAE feature activations.
-    2. For each feature, record the number of times (tokens) it had a non-zero activation.
-    3. Divide by the total number of tokens to get the fraction, and take the log10 of it (adding some epsilon value to avoid log-of-zero)
-    4. Plot the histogram of the resulting log-10 fractions (the number of histogram samples equals to the number of features)
+   1. Run a given sample of tokens through the model, and get the SAE feature activations.
+   2. For each feature, record the number of times (tokens) it had a non-zero activation.
+   3. Divide by the total number of tokens to get the fraction, and take the log10 of it (adding some epsilon value to avoid log-of-zero)
+   4. Plot the histogram of the resulting log-10 fractions (the number of histogram samples equals to the number of features)
 
 We'll compute these metrics first for the base model and its SAE to get a baseline, then for the finetuned model with the same SAE, and compare the resulting metrics against the baseline<d-footnote>Even though density histograms are not technically a metric, we can infer quantitative metrics from them like the number of dead features</d-footnote>. The dataset used in both cases is the original training dataset of the corresponding SAE:
 
@@ -209,10 +198,10 @@ Before analyzing the SAE metrics on the finetuned models, we will visualize some
 
 Computing the Cosine Similarities and Euclidian Distances of the activations yields a tensor of shape `[N_BATCH, N_CONTEXT]` (each token position is determined by its batch number and position in the context). A simple metric to start with is to consider the global mean of the Cosine Similarities of the activations across both batch and context dimensions, giving a single scalar representing the overall similarity. This can be seen in the following table:
 
-| Model/Finetune | Global Mean (Cosine) Similarity |
-| --- | --- |
-| Gemma-2b/Gemma-2b-Python-codes | 0.6691 |
-| Mistral-7b/Mistral-7b-MetaMath | 0.9648 |
+| Model/Finetune                 | Global Mean (Cosine) Similarity |
+| ------------------------------ | ------------------------------- |
+| Gemma-2b/Gemma-2b-Python-codes | 0.6691                          |
+| Mistral-7b/Mistral-7b-MetaMath | 0.9648                          |
 
 This already suggests much better transferability of the Mistral-7b SAE for its MetaMath finetune. For a more fine-grained comparison, we flatten the similarities into a `N_BATCH * N_CONTEXT` vector and plot the histogram across all tokens:
 
@@ -262,6 +251,7 @@ Gemma-2b - Euclidian Distance Context Line
 </div>
 
 Mistral-7b - Euclidian Distance Context Line
+
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/3.8.png" alt="My Image" width="700" />
 </div>
@@ -279,10 +269,10 @@ These results already anticipate a considerable difference in the transferabilit
 In this section, we'll compute a set of standard SAE metrics for base and finetuned models, using the same base SAE in both scenarios (i.e., the SAE that was trained on the base model activations):
 
 1. For the **base model**:
-    1. we sample input tokens from the **original SAE training dataset**
-    2. pass the tokens through the base model to get **the model's activations**
-    3. pass the activations through the SAE to **get the feature activations**
-    4. complete the forward pass of the base model to **get the final loss** (used afterward for the reconstructed loss)
+   1. we sample input tokens from the **original SAE training dataset**
+   2. pass the tokens through the base model to get **the model's activations**
+   3. pass the activations through the SAE to **get the feature activations**
+   4. complete the forward pass of the base model to **get the final loss** (used afterward for the reconstructed loss)
 2. Then we repeat the same steps for the **finetuned** **model**, using the same tokens dataset
 3. Finally, we compute the metrics mentioned in the Evaluating SAEs performance section.
 
@@ -291,16 +281,16 @@ In this section, we'll compute a set of standard SAE metrics for base and finetu
 Before delving deeper into the results, we want to point out three technical details:
 
 1. The sample size used across nearly all experiments is **256K tokens**
-2. Similarly to [Kissane et al.](https://www.lesswrong.com/users/connor-kissane?from=post_header)<d-cite key="sae_finetuning"></d-cite> we observed a major numerical instability when computing our reconstruction loss and variance explained metrics. As the authors noted:
-    
-    > SAEs fail to reconstruct activations from the opposite model that have outlier norms (e.g. BOS tokens). These account for less than 1% of the total activations, but cause cascading errors, so we need to filter these out in much of our analysis.
-    > 
-3. To solve this problem we used a similar outlier filtering technique, where an outlier is defined as *an activation vector whose (L2) norm exceeds a given threshold*. We tried several ways to find a "good" threshold and arrived at values similar to those used by *Kissane et al*:
-    - **290 norm value** for the Gemma-2b model
-    - **200 norm value** for the Mistral-7B model
-    
-    Using these threshold values, we found that **only 0.24% activations are classified as outliers in the Gemma-2b model**, and **0.7% in the Mistral-7B**, agreeing with the Kissane et al. result that these outliers account for less than 1% of activations. It should be noticed, however, that we *only used this outlier filtering technique for our reconstruction loss & variance explained* experiments to avoid numerical errors. In practice, it means that for this experiment the true sample size was a little smaller than for the other experiments, equal to $$\left( 1 - \text{outlier_fraction} \right) \times 256{,}000$$ with the $$\text{outlier_fraction}$$ defined above.
-    
+2. Similarly to [Kissane et al.](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite> we observed a major numerical instability when computing our reconstruction loss and variance explained metrics. As the authors noted:
+
+   > SAEs fail to reconstruct activations from the opposite model that have outlier norms (e.g. BOS tokens). These account for less than 1% of the total activations, but cause cascading errors, so we need to filter these out in much of our analysis.
+
+3. To solve this problem we used a similar outlier filtering technique, where an outlier is defined as _an activation vector whose (L2) norm exceeds a given threshold_. We tried several ways to find a "good" threshold and arrived at values similar to those used by _Kissane et al_:
+
+   - **290 norm value** for the Gemma-2b model
+   - **200 norm value** for the Mistral-7B model
+
+   Using these threshold values, we found that **only 0.24% activations are classified as outliers in the Gemma-2b model**, and **0.7% in the Mistral-7B**, agreeing with the Kissane et al. result that these outliers account for less than 1% of activations. It should be noticed, however, that we _only used this outlier filtering technique for our reconstruction loss & variance explained_ experiments to avoid numerical errors. In practice, it means that for this experiment the true sample size was a little smaller than for the other experiments, equal to $$\left( 1 - \text{outlier_fraction} \right) \times 256{,}000$$ with the $$\text{outlier_fraction}$$ defined above.
 
 ## 4.3 Results
 
@@ -376,17 +366,13 @@ As you can see, the L0-Loss of the features and variance explained increase a bi
   </tbody>
 </table>
 
-
-
-Now, this is what *bad* SAE transferability looks like! But actually this should come as no surprise after the [Kissane et al.](https://www.lesswrong.com/users/connor-kissane?from=post_header)<d-cite key="sae_finetuning"></d-cite> result: they concluded that Gemma-2b SAEs do not transfer even between the base and the *instruct* models, so when you add an additional finetuning step on top of the instruct, it's completely expected that the metrics will get even worse. The authors explain this behavior with an abnormal weights deviation in the instruct model:
+Now, this is what _bad_ SAE transferability looks like! But actually this should come as no surprise after the [Kissane et al.](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite> result: they concluded that Gemma-2b SAEs do not transfer even between the base and the _instruct_ models, so when you add an additional finetuning step on top of the instruct, it's completely expected that the metrics will get even worse. The authors explain this behavior with an abnormal weights deviation in the instruct model:
 
 > Here we show that the weights for Gemma v1 2B base vs chat models are unusually different, explaining this phenomenon (credit to Tom Lieberum for finding and sharing this result):
->
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.1.png" alt="My Image" width="700" />
 </div>
-
 
 But what effect does this have on the SAE features? Well, we could expect that if an SAE is no longer able to reconstruct the input activations, it will always “hallucinate” - any features it “detects” will not make any sense. Let’s see if this expectation holds in practice for the Gemma-2b model.
 
@@ -395,7 +381,6 @@ We’ll start with the feature activations histogram plot. In general, this kind
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.2.png" alt="My Image" width="700" />
 </div>
-
 
 Two things to note:
 
@@ -408,7 +393,6 @@ With this in mind, let’s compare it with the same kind of histogram for our Ge
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.3.png" alt="My Image" width="700" />
 </div>
 
-
 If that’s not a characterization for “cursed”, we don’t know what is! Instead of a nice bell curve, we now have some sort of a 3-mode monster in the non-zero activations section. To be clear - nothing like that was present when we repeated this experiment for the Mistral-7B: we obtained the well-expected bell curves with similar mean and standard deviation for both base and finetuned models. We don’t have a good explanation for this Gemma-2b anomaly, but we’ll try to give some deeper insight into what happens with the SAE features in the next section.
 
 Let’s move on to the feature densities plot, which was produced as described in the Evaluating SAEs Performance section. Starting from Gemma-2b:
@@ -417,11 +401,9 @@ Let’s move on to the feature densities plot, which was produced as described i
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.4.png" alt="My Image" width="700" />
 </div>
 
-
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.5.png" alt="My Image" width="700" />
 </div>
-
 
 As expected from the above results, the two plots have little in common. We see that most of our dead features (in the base model) turn alive in the finetuned one! To see where exactly these dead feature densities land in the finetuned model (what are their new densities), we also made a parallel coordinate plot (below we show two versions of the same plot: with different density ranges highlighted):
 
@@ -429,11 +411,9 @@ As expected from the above results, the two plots have little in common. We see 
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.6.png" alt="My Image" width="700" />
 </div>
 
-
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.7.png" alt="My Image" width="700" />
 </div>
-
 
 So it looks like the dead features spread out quite widely in the finetuned model, contributing to more probability mass before the -3 log-density. As for the dense features (-4 to -1 log density) in the base model, their density interval gets squeezed to (-3, -1) in the finetuned model, causing a sharp mode near the -2.5 log-density value.
 
@@ -443,11 +423,9 @@ We’ll continue the Gemma-2b investigation in the next chapter, and conclude th
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.8.png" alt="My Image" width="700" />
 </div>
 
-
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.9.png" alt="My Image" width="700" />
 </div>
-
 
 We can see that for Mistral the feature densities distribution almost doesn’t change after the model finetuning! The only slight difference is in the number of dead features: the finetuned Mistral has around 80 dead features less than the base one. To zoom in closer, we also show the parallel coordinate plot:
 
@@ -455,11 +433,9 @@ We can see that for Mistral the feature densities distribution almost doesn’t 
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.10.png" alt="My Image" width="700" />
 </div>
 
-
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/4.11.png" alt="My Image" width="700" />
 </div>
-
 
 So yes, a small number of features do turn alive, but also some features (even a smaller amount) turn dead in the finetuned model! Overall though, the feature densities look very similar, with the Pearson correlation of their log10 densities equal to 0.94 (versus 0.47 for the Gemma-2b case).
 
@@ -474,8 +450,8 @@ As noted in the SAE features for AI Safety section of our post, the end goal of 
 In our case of studying transferability “by default”, the better way to demonstrate it is to show that our SAE features “stay relevant” in the finetuned model, so that we can expect that they still potentially serve as the basis for circuit analysis. Showing this rigorously would be a really difficult task (partly because there’s no standard way to do circuit analysis in the SAE basis yet) and it’s out of scope for this blog post. What we did instead is apply an [approach from Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features#phenomenology-universality)<d-cite key="bricken2023monosemanticity"></d-cite> for studying features **universality**:
 
 - Normally to study if a feature from model A is conceptually the same (has the same “role” in the model) as another feature in the model B, one can compute
-    - **feature activation similarity**: represent a feature as a vector of its activations across a given sample of tokens, obtaining a *feature activations vector →* do it for model A’s feature, model B’s feature and compute a **correlation between their activations vectors**.
-    - **feature logits similarity:** represent a feature as a vector of its [logit weights](https://transformer-circuits.pub/2023/monosemantic-features#feature-arabic-effect)<d-cite key="bricken2023monosemanticity"></d-cite> (for each token of the vocab a logit weight is the relative probability of that token as predicted by the feature direct effect), obtaining a *feature logit vector→* do it for model A’s feature, model B’s feature and compute a **correlation between their logit vectors**.
+  - **feature activation similarity**: represent a feature as a vector of its activations across a given sample of tokens, obtaining a _feature activations vector →_ do it for model A’s feature, model B’s feature and compute a **correlation between their activations vectors**.
+  - **feature logits similarity:** represent a feature as a vector of its [logit weights](https://transformer-circuits.pub/2023/monosemantic-features#feature-arabic-effect)<d-cite key="bricken2023monosemanticity"></d-cite> (for each token of the vocab a logit weight is the relative probability of that token as predicted by the feature direct effect), obtaining a _feature logit vector→_ do it for model A’s feature, model B’s feature and compute a **correlation between their logit vectors**.
 - So, we call model A our base model, model B - the corresponding finetune, and compute feature activation similarity and logits similarity for a given sample of the SAE features (which are the same for the base and finetuned models).
 
 This can be seen as a (very) rough proxy for “the feature is doing the same job in the finetuned model”, and we call it the “**feature transferability test**”.
@@ -496,87 +472,70 @@ Then, our approach for the rest of this section looks as follows:
 1. We sample max 100 exclusively dead features and 1000 regular features using our density histogram values for each base model and its finetune.
 2. We convert these features to their activation vector and logit vector representations for both the base model and its finetune.
 3. For each regular feature, we compute their **activation similarity** and the **logits similarity** with respect to the corresponding finetune, and for the exclusively dead features - their **activation error:**
-    - We cannot really compute the activation similarity as a correlation score if one of the feature’s activation vectors is constantly 0, i.e. the feature is dead. In this case we take the log10 of these activation vectors (with `1e-10` as the epsilon value to avoid a log of zero), take the [Mean Absolute Error](https://en.wikipedia.org/wiki/Mean_absolute_error) of the resulting vectors and call it **activation error**<d-footnote>It makes little sense to compute dead features logit similarity: if the feature never activates, it doesn’t matter what its logit effect is - it will never manifest itself in the model. </d-footnote>.
-        
+   - We cannot really compute the activation similarity as a correlation score if one of the feature’s activation vectors is constantly 0, i.e. the feature is dead. In this case we take the log10 of these activation vectors (with `1e-10` as the epsilon value to avoid a log of zero), take the [Mean Absolute Error](https://en.wikipedia.org/wiki/Mean_absolute_error) of the resulting vectors and call it **activation error**<d-footnote>It makes little sense to compute dead features logit similarity: if the feature never activates, it doesn’t matter what its logit effect is - it will never manifest itself in the model. </d-footnote>.
 4. Additionally, we plot a **histogram of similarities** for each feature type, since we observed a significant deviation of the similarity score (mainly activation similarity) in some experiments.
 
 ## 5.2 Gemma-2b features transferability test
 
-One could say that in the Gemma-2b case, it’s obvious from the previous results that our SAE doesn’t transfer. But we could imagine a case where *some* (perhaps a tiny fraction) of our SAE features from the regular density interval do still transfer, so we decided to conduct this experiment anyway.
+One could say that in the Gemma-2b case, it’s obvious from the previous results that our SAE doesn’t transfer. But we could imagine a case where _some_ (perhaps a tiny fraction) of our SAE features from the regular density interval do still transfer, so we decided to conduct this experiment anyway.
 
-Starting with the features that are exclusively dead in the *base* model, their mean activation error for Gemma-2b and Gemma-2b python-codes finetune is **0.025**. A histogram of these 100 activation errors is given below:
-
+Starting with the features that are exclusively dead in the _base_ model, their mean activation error for Gemma-2b and Gemma-2b python-codes finetune is **0.025**. A histogram of these 100 activation errors is given below:
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/5.1.png" alt="My Image" width="700" />
 </div>
 
-
 This made us think that “dead features turning alive” anomaly is not so much of an anomaly, because the dead features activate only (very) slightly in the finetuned model. The max activation value across all 100 dead features in the finetuned model was **1.1,** indicating that our “dead feature direction” is only slightly off in the finetuned model, and can be easily adjusted by SAE finetuning.
 
-As for the features that are exclusively dead in the *finetune* model, Gemma-2b had only two of them on our sample, with the activation error equal to 0.34 and 3.19, which is considerably higher than in the previous case.
+As for the features that are exclusively dead in the _finetune_ model, Gemma-2b had only two of them on our sample, with the activation error equal to 0.34 and 3.19, which is considerably higher than in the previous case.
 
 Moving on to the regular features, we expected to see a much more drastic dissimilarity of their activations. Indeed, the **mean activation similarity for our sample of Gemma-2b regular feature is 0.39**. Let’s check the histogram of these similarity scores:
-
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/5.2.png" alt="My Image" width="700" />
 </div>
 
-
 Interestingly, we see that a small fraction of features (~10%) have an activation similarity above 0.8! This implies that if these features were interpretable in the base model, they will most likely stay interpretable in the finetune model<d-footnote>We didn’t try to manually interpret these features’ activations to verify this claim, and it would be interesting to see future works in this direction</d-footnote>. But we’re not sure about the significance of this result: this could just as well be noise, so we invite further research in this area.
 
 As for the logit similarity of these regular features, it turns out it’s much higher than our activation similarity, with a mean value of **0.952.** Looking at the logit similarity scores histogram, it’s also much more concentrated towards the end of the interval:
-
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/5.3.png" alt="My Image" width="700" />
 </div>
 
-
-*However, we realized* that it's easy to be misled by the mean logits similarity score. What it's really saying is that our unembedding matrix (which is multiplied by the feature direction to get the logits similarity) hasn't changed that much after finetuning (with a Frobenius norm ratio equal to 1.117 as we checked for our Gemma finetune). So *if the feature has still the same direction, we can indeed say that the "direct feature effect" hasn't changed in the finetuned model, but **we never checked this premise!* All we know is that there exist ~10% of features which have reasonably high activation similarity scores with the features from the base model. *The key point is that the latter is a statement about the feature's encoder direction* (one that is used to project onto to get the feature's activation, [explained by Neel Nanda here](https://www.lesswrong.com/posts/fKuugaxt2XLTkASkk/open-source-replication-and-commentary-on-anthropic-s)<d-cite key="Nanda_2023"></d-cite>), *not the decoder one -* which is what we mean when we talk about *feature directions. So it could be the case that the feature is still there but changed its direction* as discussed in [this comment,](https://www.lesswrong.com/posts/bsXPTiAhhwt5nwBW3/do-sparse-autoencoders-saes-transfer-across-base-and?commentId=pJHfoZ2GLD8neS57g)<d-cite key="sae_finetuning"></d-cite> it could also be that some features change their directions and the others don't - it's impossible to tell when the reconstruction score (e.g. variance explained) is as poor as in the Gemma-2b case.
-
-
+However, it's easy to be misled by the mean logits similarity score. What it's really saying is that our unembedding matrix (which is multiplied by the feature direction to get the logits similarity) hasn't changed that much after finetuning (with a Frobenius norm ratio equal to 1.117 as we checked for our Gemma finetune). So *if the feature has still the same direction, we can indeed say that the "direct feature effect" hasn't changed in the finetuned model, but we never checked this premise!* All we know is that there exist ~10% of features which have reasonably high activation similarity scores with the features from the base model. *The key point is that the latter is a statement about the feature's encoder direction* (one that is used to project onto to get the feature's activation, [explained by Neel Nanda here](https://www.lesswrong.com/posts/fKuugaxt2XLTkASkk/open-source-replication-and-commentary-on-anthropic-s)<d-cite key="Nanda_2023"></d-cite>), *not the decoder one -* which is what we mean when we talk about *feature directions. So it could be the case that the feature is still there but changed its direction* as discussed in [this comment,](https://www.lesswrong.com/posts/bsXPTiAhhwt5nwBW3/do-sparse-autoencoders-saes-transfer-across-base-and?commentId=pJHfoZ2GLD8neS57g)<d-cite key="sae_finetuning"></d-cite> it could also be that some features change their directions and the others don't - it's impossible to tell when the reconstruction score (e.g. variance explained) is as poor as in the Gemma-2b case.
 
 ## 5.3 Mistral-7B features transferability test
 
 Here we repeat all the same experiments for Mistral-7B and its MetaMath finetune, and compare the result with the Gemma-2b case.
 
-Let’s start with the features that are exclusively dead in the Mistral base model. Their mean activation error is 0.0003, which is almost *two orders of magnitude* lower than in the Gemma-2b case. The corresponding histogram looks like this:
-
+Let’s start with the features that are exclusively dead in the Mistral base model. Their mean activation error is 0.0003, which is almost _two orders of magnitude_ lower than in the Gemma-2b case. The corresponding histogram looks like this:
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/5.4.png" alt="My Image" width="700" />
 </div>
 
-
-Once again, the results suggest *that even though the dead features in the base model are no longer dead in the finetuned one*, they activate really weakly on average, so it should be easy to adjust them with a cheap SAE finetuning.
+Once again, the results suggest _that even though the dead features in the base model are no longer dead in the finetuned one_, they activate really weakly on average, so it should be easy to adjust them with a cheap SAE finetuning.
 
 The activation error for the features exclusively dead in the finetuned model tells a similar story:
-
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/5.5.png" alt="My Image" width="700" />
 </div>
 
-
 Here the error is even smaller, implying that even though some features stopped activating after finetuning, their corresponding activation values in the base model were really low. And the features are often uninterpretable in the lowest activation intervals anyway, so it should have a minor overall effect on SAEs transferability.
 
 Let’s conclude this section with an analysis of our regular features. As expected from the results of the last section, the activation similarity of these features is quite high, with a mean value of **0.958**. As for the activation scores histogram:
-
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/5.6.png" alt="My Image" width="700" />
 </div>
 
-
 As we can see, the distribution of the scores is strongly attracted to the 0.9-1.0 correlation interval, so we can conclude that SAE feature transferability is significantly high in this case. This is also backed up by the mean logits similarity of 0.9996, and a rather straightforward logits similarity histogram:
-
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-02-06-do-sparse-autoencoders-saes-transfer-across-base-and-finetuned-language-models/5.7.png" alt="My Image" width="700" />
 </div>
-
 
 ---
 
@@ -584,7 +543,7 @@ As we can see, the distribution of the scores is strongly attracted to the 0.9-1
 
 ## 6.1 Conclusions
 
-Going back to our original question of *“Do SAEs trained on a base model transfer to the finetuned one?”*, the most obvious answer that comes to mind now is - it depends! We got drastically different results for our Gemma-2b-python-codes and Mistral-7B-MetaMath finetunes. However, **it seems possible that one could estimate the “degree of transferability” in advance*.*** One method is to compute various weight deviation metrics, such as the one used by [Kissane et al](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite> for Gemma-2b, and another method that we used - to compute activation similarities of the model that are fed into an SAE. Both of these anecdotally correlate with the results of our transferability experiments, but a more thorough study is definitely needed.
+Going back to our original question of _“Do SAEs trained on a base model transfer to the finetuned one?”_, the most obvious answer that comes to mind now is - it depends! We got drastically different results for our Gemma-2b-python-codes and Mistral-7B-MetaMath finetunes. However, **it seems possible that one could estimate the “degree of transferability” in advance*.*** One method is to compute various weight deviation metrics, such as the one used by [Kissane et al](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite> for Gemma-2b, and another method that we used - to compute activation similarities of the model that are fed into an SAE. Both of these anecdotally correlate with the results of our transferability experiments, but a more thorough study is definitely needed.
 
 Another takeaway we’ve had after finishing this post is that **"SAE transferability" can mean different things**. One can utilize the standard SAE evaluation metric to get a high-level evaluation of the SAE quality on the finetuned model, but it doesn’t always give a deeper insight into what happens with the SAE feature once we zoom in (which may be more interesting for the real SAE applications in mech interp). Our Gemma-2b results suggest that some SAE features may still be interpretable, even when finetuning has completely rendered the SAE incapable of reconstructing the input. And although the significance of this result can be rightly questioned, we still think it is interesting to investigate further.
 
@@ -593,12 +552,13 @@ Another takeaway we’ve had after finishing this post is that **"SAE transferab
 The main limitations we see in our work are the following:
 
 - It’s not clear how our results will generalize to other finetunes. A more principled approach would be to use a custom finetuning setup, where one could e.g. study the relationship between the amount of compute put into finetuning and some key SAE transferability metrics like the reconstruction loss etc.
-    - Our finetuned models also had almost the same dictionaries as the base model (with the exception of a single padding token), so it's also not clear whether our results generalize to the finetuned model with significantly modified dictionaries (e.g. language finetunes for languages that were not in the original training dataset of the base model)
+  - Our finetuned models also had almost the same dictionaries as the base model (with the exception of a single padding token), so it's also not clear whether our results generalize to the finetuned model with significantly modified dictionaries (e.g. language finetunes for languages that were not in the original training dataset of the base model)
 - We only studied SAEs for a single residual layer for Gemma-2b and Mistral-7B models. A more thorough study is needed to see how these results will vary when considering different layers and different SAE activations, e.g. MLP or hidden head activations.
 - All our experiments were performed on the training dataset of the base SAE, i.e. on the original training distribution of the base models. But the finetuned models are mostly used for tasks that they have been finetuned on, so we definitely need some future work here to extend these results to a more specific setting of finetuned models.
 - Our analysis of SAE features transferability was somewhat superfluous, because we didn't do a thorough investigation of the interpretability of our features after the finetuning. An even more representative study would be to replicate some kind of circuit analysis in the SAE basis to rigorously prove if (at least some) features are still involved in the same computation of the finetuned model.
 
 ---
+
 # Appendix
 
 All code is available on [github](https://github.com/tommasomncttn/SAE-Transferability)
