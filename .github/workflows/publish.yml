@@ -2,7 +2,7 @@ name: Build & Publish to External Repo Subfolder (on main)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 permissions:
   contents: read
