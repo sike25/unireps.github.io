@@ -40,7 +40,7 @@ pagination:
 </ul>
 </p>
 
-<p>All submissions will undergo peer review, and accepted posts will be published on our website and promoted across social channels. You'll also get the opportunity to present your blogpost in a poster format during the workshop!</p>
+<p>All submissions will undergo peer review, and accepted posts will be published on our website and promoted across social channels. You'll also get the opportunity to present your blogpost in a poster format during the workshop! </p>
 
 <p><a href="/blog/2024/guidelines">🔗 Learn how to submit your blogpost here</a></p>
 
