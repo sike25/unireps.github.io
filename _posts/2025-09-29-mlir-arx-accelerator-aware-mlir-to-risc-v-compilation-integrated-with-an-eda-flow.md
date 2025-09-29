@@ -18,19 +18,23 @@ authors:
 bibliography: 2025-09-29-mlir-arx-accelerator-aware-mlir-to-risc-v-compilation-integrated-with-an-eda-flow.bib
 
 toc:
-  - name: "Introduction"
-
+  - name: "1. Introduction"
+  - name: "2. Background"
+  - name: "3. Design and Architecture"
+  - name: "4. Implementation"
+  - name: "5. Early Evaluation"
+  - name: "6. Conclusion"
+  - name: "7. Limitations and outlook"
+  - name: "8. Related Work"
+  - name: "9. VTA Configuration and Expected Performance on FPGA"
+  - name: "10. ARX Dialect"
+  - name: "11. Profiling Instrumentation and Log Schema"
+  - name: "12. Cost Model Details and Selection Algorithm"
+  - name: "13. MNIST Model Shapes and Mapping Notes"
 
 ---
 
-<!-- # **TLDR** (Executive Summary) -->
-<!-- - We explored **whether Sparse Autoencoders (SAEs)** can effectively transfer from base language models to their finetuned counterparts, focusing on two base models: [Gemma-2b](https://huggingface.co/google/gemma-2b) <d-cite key="gemmateam2024gemmaopenmodelsbased"></d-cite> and [Mistral-7B-V0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1) <d-cite key="jiang2023mistral7b"></d-cite> (we tested finetuned versions for coding and mathematics respectively)
-- In particular, we split our analysis into three steps:
-  1. We analysed the similarity (**Cosine and Euclidian Distance**) of the residual activations, which was **highly correlated with the resulting transferability of the SAEs** for the two models.
-  2. We computed several performance metrics (L0 Loss, Reconstruction CE Loss, Variance Explained) of the base SAEs on the fine-tuned models. Almost all metrics agreed on a **significant degradation of the SAE performance for the Gemma-2b** model, and **remained within a reasonable range for the Mistral-7B model**, indicating a much better transferability.
-  3. We took a further step by operationalizing the idea of transferability of SAE from base models to fine-tuned models by applying an [approach from Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features#phenomenology-universality)<d-cite key="bricken2023monosemanticity"></d-cite> for studying feature universality through **feature activation similarity** and **feature logit similarity**. These similarity scores were mostly consistent with the results from the previous step, albeit with one caveat for the Gemma-2b model, suggesting that **some SAE features may still transfer** even if the overall SAE performance is poor for the finetuned model.
-- Overall, our results agree with [previous work that studied Instruct models](https://www.alignmentforum.org/posts/fmwk6qxrpW8d4jvbd/saes-usually-transfer-between-base-and-chat-models)<d-cite key="sae_finetuning"></d-cite>. That is, SAEs transferability seems to be model-dependent and sensitive to the finetuning process.
-- We make our [code repository public](https://github.com/tommasomncttn/SAE-Transferability) to facilitate future work in this direction. -->
+**TLDR**
 
 Deploying AI models on heterogeneous RISC-V systems requires not only partitioning computation between CPU and accelerator, but also identifying which operations to accelerate when hardware capabilities evolve. We present `mlir-arx`, a profile-guided compiler built on MLIR that introduces an `arx` dialect to encode accelerator constraints, inserts lightweight profiling operations via dedicated passes, and applies a two-stage (analytic + profile-guided) cost model to form maximal offload regions under resource and dependency limits. Early evaluation on a small MNIST CNN with a configurable VTA accelerator on a Genesis FPGA prototype demonstrates that the compile--measure loop identifies profitable regions and achieves significant end-to-end speedups over the CPU-only baseline.
 
@@ -38,38 +42,40 @@ Availability. Source code and artifacts are available at: [Repository in Our Git
 
 ---
 
-## Introduction 
+# **1. Introduction**
 
 Edge and embedded AI systems increasingly pair general-purpose RISC-V cores with domain accelerators (from NPUs to lightweight tensor engines) to meet latency and energy targets<d-cite key="jouppi2017tpu, eyeriss2016, nvdla2019"/>. In such settings, the practical challenge is not only to partition a model across CPU and accelerator boundaries but also to decide what to accelerate when accelerator capabilities may be unknown or evolving at project start. A sensible path is to begin from a CPU-only baseline, profile real executions, and then offload the most profitable regions subject to resource and orchestration constraints.
 
-MLIR's multi-dialect design and progressive lowering are a natural fit for this workflow<d-cite key="mlir,stablehlo"/>. However, turning it into an end-to-end solution for RISC-V SoCs requires additional pieces: 
+MLIR's multi-dialect design and progressive lowering are a natural fit for this workflow<d-cite key="mlir"/>. However, turning it into an end-to-end solution for RISC-V SoCs requires additional pieces: 
 
-### Requires
+### 1.1 Requires
 1. IR-level capability modeling to express an accelerator's constraints
 2. lightweight profiling instrumentation that can be injected/stripped by passes
 3. a cost model that joins analytic estimates with profile-derived efficiencies
 4. packaging that integrates with an SoC/EDA flow. 
 
 
-We present `MLIR-ARX`, a profile-guided compiler built on MLIR that introduces an `arx` dialect for accelerator capabilities, selects profitable offload regions via a two-stage cost model, and provides a retargetable backend integrated with RISC-V eXpress (`RVX`<d-footnote>We thank collaborators who contributed to the RVX integration and platform bring-up.</d-footnote>) for FPGA bring-up<d-cite key="rvx-etrij"/>. For initial experiments we use VTA as a configurable accelerator to test profile-driven selection and resource-aware partitioning, while the CPU-only path remains the numerically correct fallback<d-cite key="iree22tiny,tvm2018"/>.
+We present `MLIR-ARX`, a profile-guided compiler built on MLIR that introduces an `arx` dialect for accelerator capabilities, selects profitable offload regions via a two-stage cost model, and provides a retargetable backend integrated with RISC-V eXpress<d-footnote>We thank collaborators who contributed to the RVX integration and platform bring-up.</d-footnote> (`RVX`) for FPGA bring-up<d-cite key="rvx-etrij"/>. For initial experiments we use VTA as a configurable accelerator to test profile-driven selection and resource-aware partitioning, while the CPU-only path remains the numerically correct fallback<d-cite key="iree22tiny,tvm2018"/>.
 
-### Contributions
+### 1.2 Contributions
 
 * **Accelerator-aware IR**. An `arx` dialect that captures accelerator capabilities (constraints, tiling, resource usage) and enables principled lifting of standard tensor ops.
 * **Cost-guided partitioning**. A two-stage (analytic + profile-guided) model that forms offload regions with explicit DMA orchestration and safe CPU fallbacks.
 * **Retargetable backend + RVX integration**. Code generation for RISC-V plus accelerator stubs and a device manifest that RVX uses for automatic integration.
 * **Early evaluation**. A small CNN on MNIST running on RVX-based FPGA prototypes with VTA, validating the compile–measure loop and selection mechanism.
 
+---
 
-## Background: MLIR Foundations and Target Platform
+# **2. Background**
+**MLIR Foundations and Target Platform**
 
-# MLIR in brief
+### 2.1 MLIR in brief
 
 MLIR is a multi-level compiler infrastructure that represents computations at various abstraction levels and supports progressive lowering through dialects and pattern-based rewrites<d-cite key="mlir"/>. Dialects capture operations, types, and constraints; key ones for `MLIR-ARX` include `mhlo/StableHLO` for tensor semantics<d-cite key="stablehlo"/>, `linalg` for structured kernels, and `memref` for explicit memory. 
 
 Two features are central to our setting: bufferization, which separates algorithmic transformations from storage decisions by converting tensors to `memref`s with explicit lifetimes, and dialect interfaces/converters, which allow capability-aware lifting or lowering between dialects. These make it possible to express accelerator constraints in IR and offload only the supported regions. Prior systems, from TVM's multi-backend flow<d-cite key="tvm2018"/> to IREE's embedded pipelines<d-cite key="iree22tiny"/>, demonstrate the viability of such end-to-end MLIR-based compilation.
 
-# Why MLIR for RISC-V + accelerators
+### 2.2 Why MLIR for RISC-V + Accelerators
 RISC-V-based edge platforms often combine a control processor (with or without a vector extension) and one or more domain accelerators attached via a memory-mapped interconnect. 
 
 This creates three immediate needs: 
@@ -79,36 +85,38 @@ This creates three immediate needs:
 
 (a) express accelerator capabilities as IR-level contracts, (b) form and legalize offload regions under those contracts, and (c) lower both sides—CPU and accelerator stubs—within a single pass manager, sharing analyses (shape, alias, dependence) across the boundary. Compared with ad-hoc code generators, the benefits are: reuse of upstream transformations, uniform debuggability, and a single IR for both accelerated and non-accelerated builds.
 
-# RVX overview
+### 2.3 RVX overview
 
 RVX is an EDA environment to assemble RISC-V SoCs (single-/multi-core, memory subsystem, interconnect, peripheral IP), validate them on FPGA, and produce handoff artifacts for silicon<d-cite key="rvx-etrij"/>. On the software side, RVX provides toolchain integration points (boot/firmware layout, MMIO address map, interrupt lines) and profiling hooks. `MLIR-ARX` targets this boundary: it emits CPU binaries, an accelerator runtime and driver stubs, and a device manifest that RVX consumes to wire up interconnect ports and firmware tables. By aligning compiler outputs with RVX's manifests, we avoid manual bring-up steps when retargeting cores or adding/removing accelerators.
 
 > We primarily target edge-style RISC-V SoCs where accelerators are memory-mapped with local SRAM and DMA engines. Our current prototype assumes statically known shapes in offload regions; dynamic-shape support is under active development.
 
+---
 
-## Design & Architecture: Profile-Guided MLIR-to-RISC-V Offload
+# **3. Design and Architecture**
+**Profile-Guided MLIR-to-RISC-V Offload**
 
-# Pipeline overview
+### 3.1 Pipeline Overview
 
 [Figure 1](#flow) shows the end-to-end flow: models import into MLIR, run once on a CPU baseline to profile, mine offload candidates, select them under FPGA budgets, form offload regions, and lower to CPU and accelerator backends. A machine-readable accelerator description generates the `arx` dialect and converters; RVX profiling closes the compile–measure loop.
 
-# Baseline execution and profiling
+### 3.2 Baseline Execution and Profiling
 `MLIR-ARX` assumes no accelerator a priori. Every model first executes end-to-end on RISC-V, producing per-op/region profiles (cycles, bytes moved, stalls, shapes/dtypes/layouts) keyed by stable IR handles. This path is also the correctness fallback for any region that proves illegal or unprofitable to offload.
 
-# Candidate discovery and cost modeling
+### 3.3 Candidate Discovery and Cost Modeling
 Hot single ops or short fusable patterns are grouped by semantics/constraints as offload candidates. For a region $R$, we use an inline estimate $\Delta T(R)=T_{\mathrm{cpu}}(R)-T_{\mathrm{off}}(R)$ with $T_{\mathrm{off}}\approx T_{\mathrm{setup}}+\max(T_{\mathrm{dma}},T_{\mathrm{cmp}})+T_{\mathrm{sync}}$ where analytic terms (op counts, tiling, bandwidth/latency) are corrected by profile-derived efficiencies. 
 
-# Resource-aware selection and partitioning
+### 3.4 Resource-Aware Selection and Partitioning
 On FPGA targets, selection respects LUT/FF/DSP/BRAM, local SRAM, DMA lanes, and clock budgets. Given per-candidate resource costs $\mathcal{R}(c)$ and budget $B$, we maximize $\sum\Delta T(c)$ subject to $\sum\mathcal{R}(c)\le B$, preferring high benefit density when tight. Selected ops become maximal \emph{offload regions} under dependency/memory constraints; the compiler inserts explicit host–device copies/fences and schedules DMA to overlap with compute.
 
 
-# Lowering and runtime
+### 3.5 Lowering and Runtime
 Both CPU and accelerator paths first lower into the `arx` dialect.
 CPU ops then follow `linalg` $\to$ `scf/affine` $\to$ `LLVM` to produce RISC-V ELFs, while accelerator ops lower directly to library calls with a thin runtime and DMA descriptors.
 A device manifest (MMIO ranges, IRQ lines) is also emitted for RVX integration.
 
 
-# Retargeting and feedback
+### 3.6 Retargeting and feedback
 
 A YAML/JSON accelerator description regenerates the `arx` capability model and converters, enabling recompilation without model changes. Deployed binaries feed fresh RVX profiles back into the cost model, which updates efficiencies and re-ranks candidates for the next iteration.
 
@@ -116,50 +124,50 @@ A YAML/JSON accelerator description regenerates the `arx` capability model and c
 # ADD IMAGE TO HERE
 <a id="flow"></a>
 
+---
 
-## Implementation: ONNX-MLIR Base, ARX Dialect, and RVX/VTA Bring-up
+# **4. Implementation**
+**ONNX-MLIR Base, ARX Dialect, and RVX/VTA Bring-up**
 
+### 4.1 Codebase and MLIR Integration
+We implement `MLIR-ARX` by extending the open-source ONNX-MLIR<d-cite key="onnxmlir2020"/> stack. Models are imported and legalized through ONNX-MLIR into MLIR's tensor/structured dialects, upon which we add our `ARX` components. The output code runs unmodified on RVX-synthesized RISC-V platforms; when no accelerator is present, the CPU path serves as the numerically correct fallback.
 
-# Codebase and MLIR integration
-We implement `MLIR-ARX` by extending the open-source ONNX-MLIR stack. Models are imported and legalized through ONNX-MLIR into MLIR's tensor/structured dialects, upon which we add our `ARX` components. The output code runs unmodified on RVX-synthesized RISC-V platforms; when no accelerator is present, the CPU path serves as the numerically correct fallback.
-
-# ARX dialect and lowering paths
+### 4.2 ARX Dialect and Lowering Paths
 The `arx` dialect lifts eligible tensor and `linalg` ops into accelerator-aware form, annotated with capability and tiling metadata. Both CPU and accelerator ops lower through this dialect: CPU paths continue via `linalg` $\to$ `scf/affine` $\to$ `LLVM` for RISC-V binaries, while accelerator ops become driver/library calls with explicit host–device transfers. Because both paths share the same pass pipeline, analyses such as shape, aliasing, and dependence are reused across CPU and accelerator lowering.
 
-# Profiling instrumentation
+### 4.3 Profiling Instrumentation
 To support the profile-driven flow, we define lightweight profiling ops (begin/end counters, byte/traffic counters, DMA/compute timestamps). When the compiler is invoked with a profiling option, an *instrumentation pass* inserts these ops around selected regions/ops during canonicalization and bufferization. The pass is designed to be idempotent and can be stripped in a late “de-instrumentation” pass for production builds. Profiles are keyed by stable IR handles to survive recompilation unless shapes change.
 
-# Accelerator target: VTA
+### 4.4 Accelerator Target: VTA
 For an initial hardware target we use Apache TVM's VTA soft accelerator. VTA implements a small set of tensor primitives with parameterizable compute parallelism (e.g., PE width), local SRAM sizes, and instruction buffer depth. This configurability makes it a good vehicle to test `MLIR-ARX`'s candidate selection and resource-aware partitioning: The capability model is regenerated from the chosen VTA configuration, while the cost model estimates tile fit, DMA overlap, and achievable throughput under the given SRAM and bandwidth constraints.
 
-## Early Evaluation
+---
 
-# Setup
-Our prototype system follows the dual-ORCA configuration in prior TIP work<d-cite key="tip2020"/>, 
-with two ORCA RISC-V RV32IM cores synthesized at 100 MHz on a Genesis FPGA and connected via the RVX-generated $\mu$NoC and AXI-based DRAM subsystem. 
-A configurable VTA overlay is attached as an MMIO+DMA device, using 8-bit inputs/weights, 32-bit accumulators, and a $16{\times}16{\times}16$ GEMM block. 
-All components are generated by RVX from a manifest and deployed to FPGA.
+# **5. Early Evaluation**
+
+### 5.1 Setup
+Our prototype system follows the dual-ORCA configuration in prior TIP work, with two ORCA RISC-V RV32IM cores synthesized at 100 MHz on a Genesis FPGA and connected via the RVX-generated $\mu$NoC and AXI-based DRAM subsystem. A configurable VTA overlay is attached as an MMIO+DMA device, using 8-bit inputs/weights, 32-bit accumulators, and a $16{\times}16{\times}16$ GEMM block. All components are generated by RVX from a manifest and deployed to FPGA.
 
 
-# Benchmark
+### 5.2 Benchmark
 For evaluation, we use a small CNN for MNIST consisting of two conv+ReLU blocks with $2{\times}2$ pooling, 
 followed by a fully connected layer (input $1{\times}28{\times}28$). 
 Profiles are first collected from the CPU-only execution to guide candidate discovery. 
 Operators selected for offload are *conv2d(+bn)+relu* blocks (Conv1, Conv2) and the final fully connected layer; control flow, quantize/dequantize, and maxpool remain on the CPU.
 
-# CPU-only baseline
+### 5.3 CPU-only Baseline
 [Table 1](#inference-time-arx) reports the measured per-layer latency on the dual ORCA cores. 
-The two convolution layers dominate the runtime (over 95\% of total latency), 
+The two convolution layers dominate the runtime (over 95 % of total latency), 
 making them the primary candidates for acceleration.
 
-# Projected accelerator performance
+### 5.4 Projected Accelerator Performance
 Since the FPGA prototype is still under integration, we estimate accelerator-side performance 
 using a simple throughput model assuming three VTA configurations (A/B/C) with 
 256/512/1024 MAC/cycle.
 [Table 1](#inference-time-arx) shows the projected latency when Conv1, Conv2, and the fully connected layer are offloaded to VTA, 
 while other layers remain on the CPU. 
 The results indicate a potential end-to-end speedup of $50 \times$–$90\times$ compared to the CPU-only baseline, 
-with hardware resource utilization scaling from $\sim$ 15\% to $\sim$ 60\% of available DSPs on the target FPGA.
+with hardware resource utilization scaling from $\sim$ 15 % to $\sim$ 60 % of available DSPs on the target FPGA.
 
 
 <a id="inference-time-arx"></a>
@@ -246,26 +254,30 @@ with hardware resource utilization scaling from $\sim$ 15\% to $\sim$ 60\% of av
   </tbody>
 </table>
 
-# Conclusion
+---
+
+# **6. Conclusion**
 
 We presented `MLIR-ARX`, a profile-driven MLIR compiler that begins from a CPU-only RISC-V baseline, identifies profitable regions, and offloads them to accelerators under resource and orchestration constraints. `MLIR-ARX` introduces the `arx` dialect for capability-aware lifting, lightweight profiling instrumentation, and a retargetable backend integrated with RVX. Early evaluation on a small MNIST CNN with a configurable VTA overlay shows that offloading Conv1/Conv2/FC achieves order-of-magnitude latency reductions over the dual-ORCA CPU baseline, consistent with our cost-model predictions.
 
-# Limitations and outlook
+---
+
+# **7. Limitations and outlook**
 
 Our cost model is analytic with profile-derived corrections; learned models may better capture controller effects and DMA/compute overlap. Offload regions currently assume static shapes; extending legality/bufferization for dynamic-shape cases is ongoing. Finally, while the CPU path can exploit vector intrinsics, full scheduling for attention-like blocks and multi-accelerator concurrency remains future work. We expect these extensions—alongside broader accelerator backends—to further tighten the compile–measure loop and reduce manual retargeting on RVX platforms.
 
 ---
 
-# **Related Work**
+# **8. Related Work**
 **RISC-V CPUs, Vector Extensions, AI Accelerators, and Design Space Exploration**
 
-# RISC-V as the Control Plane for Heterogeneous ML SoCs
+### 8.1 RISC-V as the Control Plane for Heterogeneous ML SoCs
 Open RISC-V implementations range from tiny in-order microcontrollers to out-of-order Linux-class cores, making them a natural control plane for accelerator-rich SoCs. Representative open cores include Rocket (in-order) and BOOM (out-of-order) from the Berkeley stack<d-cite key="rocket,boom"/>, CVA6/Ariane<d-cite key="cva6"/>, and the PULP family for ultra-low-power microcontrollers with DSP-like packed-SIMD extensions<d-cite key="pulp"/>. SoC generators such as Chipyard<d-cite key="chipyard"/> offer standard interconnects (TileLink/AXI) and co-processor attachment points (e.g., RoCC), reducing the cost of integrating DMA-capable accelerators alongside a RISC-V host.
 
-# RISC-V Vector and Packed-SIMD for ML
+### 8.2 RISC-V Vector and Packed-SIMD for ML
 The RISC-V Vector extension (RVV)<d-cite key="rvv"/> adopts a vector-length-agnostic model that decouples vector width from the ISA, enabling portability across microarchitectures. Implementations can choose lane count and microarchitectural details, as explored in Hwacha and Ara<d-cite key="hwacha"/>. For MCU-class devices, the packed-SIMD “P” extensions from PULP<d-cite key="pulp"/> target fixed-point and dot-product primitives. In practice, RVV or packed SIMD is well-suited for control and medium-granularity tensor compute, while large GEMMs/convolutions are often offloaded to dedicated accelerators.
 
-# Attachment Patterns for AI Accelerators
+### 8.3 Attachment Patterns for AI Accelerators
 
 Three patterns dominate:
 
@@ -277,24 +289,24 @@ Three patterns dominate:
 
 `MLIR-ARX` assumes the first pattern (MMIO+DMA) but its IR contracts generalize to other attachments.
 
-# Tensor Accelerators and Dataflows
+### 8.4 Tensor Accelerators and Dataflows
 A wide body of work covers compute/dataflow design for DNNs: systolic arrays (e.g., TPU<d-cite key="jouppi2017tpu"/>), spatial dataflows (row/output/weight-stationary, e.g., Eyeriss<d-cite key="eyeriss2016"/>), and precision-specialized engines (e.g., NVDLA<d-cite key="nvdla2019"/>). Open-source generators like Gemmini<d-cite key="gemmini"/> produce RISC-V-attached systolic arrays with tunable parameters. These designs show that with aggressive on-chip reuse and explicit DMA/compute overlap, accelerators can deliver order-of-magnitude energy savings if the compiler/runtime manages packing, tiling, and synchronization.
 
-# FPGA Overlays and Soft Accelerators
+### 8.5 FPGA Overlays and Soft Accelerators
 FPGAs serve as prototyping and deployment platforms for edge ML accelerators. Overlay designs, including VTA<d-cite key="vta"/>, FINN<d-cite key="finn"/>, and hls4ml<d-cite key="hls4ml"/>, expose parameter spaces (PE array size, SRAM depth, DMA width) suitable for compiler-driven design space exploration. Compared to fixed-function ASICs, overlays trade some efficiency for rapid iteration and portability.
 
-# Memory Systems and Data Movement
+### 8.6 Memory Systems and Data Movement
 Memory hierarchy decisions strongly influence performance and energy. Designs like Eyeriss exploit row-stationary mapping to minimize off-chip traffic; others (e.g., MAERI, SCNN) adapt to sparsity and flexible reductions. For RISC-V-attached accelerators, key challenges are software-visible packing/tiling to match SRAM/DMA configurations and overlapping DMA with compute. `MLIR-ARX`'s ARX dialect makes these constraints explicit in IR.
 
-# Design Space Exploration (DSE) for AI Accelerators
+### 8.7 Design Space Exploration (DSE) for AI Accelerators
 DSE methods co-optimize accelerator architecture and mapping. Frameworks like ZigZag<d-cite key="zigzag"/> generate and evaluate architecture–mapping pairs with cost models for area, energy, and performance, achieving significant energy gains over baseline mappings. Tools such as Timeloop<d-cite key="timeloop"/> and Accelergy<d-cite key="accelergy"/> focus on loop mapping and energy estimation.
 
 These DSE strategies are applicable to RISC-V–integrated accelerators, where FPGA/SoC constraints require balancing performance and resource use. In `MLIR-ARX`, the cost model and candidate selection can be extended to search over accelerator microarchitectures and RISC-V/accelerator interface options, further tightening the compile–measure loop.
 
-# Positioning of MLIR-ARX
+### 8.8 Positioning of MLIR-ARX
 `MLIR-ARX` complements the hardware and DSE work above by embedding accelerator capability models in IR, using profile-guided cost modeling to identify profitable offloads, inserting legal DMA/synchronization with overlap, and retargeting automatically to new accelerators or configurations without model changes. Hardware advances supply the building blocks; `MLIR-ARX` provides the IR-level integration and automation in a RISC-V EDA flow.
 
-# MLIR-centric compiler stacks and HLS/RTL generation
+### 8.9 MLIR-centric compiler stacks and HLS/RTL generation
 MLIR has increasingly been used not only as a software-oriented IR but also as a hardware-construction and HLS coordination layer. The CIRCT project extends MLIR with hardware-facing dialects (e.g., `hw`, `comb`, `sv`, `fsm`) and export passes to synthesizable SystemVerilog, enabling end-to-end generation of RTL directly from MLIR programs <d-cite key="circt"/>. For dataflow-style accelerators, the `handshake` and `staticlogic` dialects capture fine- and coarse-grain control and enable automated scheduling/retiming before \emph{ExportVerilog}. These flows complement software-oriented tensor dialects by giving a path to hardware under the same abstraction umbrella.
 
 A second line of work connects MLIR to C/C++ code generation as an HLS front end. The `EmitC` path lowers structured MLIR to portable C++ suitable for downstream toolchains, including HLS compilers, while preserving shape and buffer semantics. Building on this idea, ScaleHLS uses MLIR to drive loop transformations (tiling, unrolling, pipelining) and memory partitioning so that the emitted C/C++ attains predictable quality-of-results when synthesized by commercial HLS tools <d-cite key="scalehls"/>. This separation—high-level legality and transformation in MLIR, hardware construction in HLS—aligns with our design where algorithmic and storage decisions are expressed in IR.
@@ -303,13 +315,14 @@ Dynamic and elastic dataflow HLS has also been explored atop MLIR. Dynamatic int
 
 Position relative to our system. These efforts show two practical integration patterns for MLIR: (i) MLIR $\to$ RTL via CIRCT-style dialects, and (ii) MLIR $\to$ C/C++ via EmitC/ScaleHLS for HLS back ends. `MLIR-ARX` currently focuses on partitioning and orchestrating offload regions under a unified IR for CPU and accelerator execution, but its capability model and region formation are compatible with both patterns: the same `arx` ops can be lowered either to MMIO-driven stubs (our VTA/RVX path) or, in a future backend, to HLS-friendly C++ or directly to RTL through CIRCT. This suggests a path to automatically synthesize specialized accelerators for hot regions discovered by the profile-guided flow, while preserving the CPU fallback and the EDA integration boundary already in place.
 
+---
 
-## VTA Configuration and Expected Performance on FPGA
+# **9. VTA Configuration and Expected Performance on FPGA**
 
-# Hardware overview
+### 9.1 Hardware overview
 VTA is a soft deep-learning accelerator intended for FPGAs. It implements a decoupled three-stage pipeline (load, compute, store) with dedicated on-chip buffers and task queues, enabling overlap of DMA and compute when tiling admits double buffering<d-cite key="vta,ml2tuner25"/>. The architecture exposes configuration knobs for arithmetic precision, on-chip buffer sizes, and the inner matrix-multiply shape that together determine tile fit, bandwidth demand, and achievable utilization.
 
-# Configuration reported on ZCU102
+### 9.2 Configuration reported on ZCU102
 As background, we refer to the ZCU102-oriented VTA configuration summarized in [Table 2](#hardware-vta), reported by prior work<d-cite key="ml2tuner25"/>. 
 Values are expressed in log2 form in TVM/VTA's JSON; for clarity we additionally list the corresponding bit-widths and buffer capacities. 
 The reported buffer sizes are one step larger than the common defaults, chosen to better utilize Zynq UltraScale+ resources.
@@ -386,7 +399,7 @@ The reported buffer sizes are one step larger than the common defaults, chosen t
 </table>
 
 
-# Implications for tiling and overlap
+### 9.3 Implications for tiling and overlap
 Given `LOG_BLOCK`=4, the intrinsic compute block is $16{\times}16{\times}16$. 
 
 Legal tiles must satisfy buffer capacity and alignment constraints for the three-stage pipeline: 
@@ -401,15 +414,18 @@ $$T_{\mathrm{off}}\approx T_{\mathrm{setup}}+\max(T_{\mathrm{dma}},T_{\mathrm{cm
 
 and hides the smaller of DMA/compute times.
 
-# Mapping to MLIR-ARX
+### 9.4 Mapping to MLIR-ARX
 In `mlir-arx`'s YAML capability description, the configuration in [Table 2](#hardware-vta) becomes the static part of the accelerator model (precision, intrinsic block, buffer capacities). The partitioner only lifts regions whose tiles provably fit, and the cost model accounts for (i) the $\max(T_{\mathrm{dma}},T_{\mathrm{cmp}})$ overlap enabled by double buffering, (ii) setup/synchronization, and (iii) memory-traffic inflation from packing and padding. Under multi-VTA, the resource model exposes the number of instances and the shared DRAM bandwidth so that selection can avoid overcommitting the memory system.
 
-## ARX Dialect: Selected Operations and Capability Schema
+---
+
+# **10. ARX Dialect** 
+**Selected Operations and Capability Schema**
 
 This section sketches the subset of ARX operations and attributes that our prototype uses to plan and legalize offload regions. The design mirrors MLIR's convention of making capabilities explicit at IR
 boundaries so that legality and code generation are mechanically checkable.
 
-# Core ops and attributes
+### 10.1 Core ops and attributes
 [Table 3](#arx-ops) summarizes representative ops and their key attributes. The attributes are chosen so that (i) legality checks are local, (ii) tiling
 constraints can be statically validated, and (iii) DMA and compute costs can be derived from sizes and layouts.
 
@@ -452,7 +468,7 @@ constraints can be statically validated, and (iii) DMA and compute costs can be 
   </tbody>
 </table>
 
-# Example lifting
+### 10.2 Example lifting
 
 A legal `linalg.matmul` with shapes that fit the intrinsic block becomes:
 
@@ -461,10 +477,11 @@ A legal `linalg.matmul` with shapes that fit the intrinsic block becomes:
      { dtype = i8, M_blk = 16, N_blk = 16, K_blk = 16 } : ...
 </pre>
 
+---
 
-## Profiling Instrumentation and Log Schema 
+# **11. Profiling Instrumentation and Log Schema**
 
-# Instrumentation ops
+### 11.1 Instrumentation ops
 
 Profiling is injected by a dedicated pass when a command-line flag is set. The ops are intentionally minimal so that they can be stripped late in the pipeline.
 
@@ -474,7 +491,7 @@ Profiling is injected by a dedicated pass when a command-line flag is set. The o
 The pass places `begin/end` around candidate ops and region boundaries after bufferization, ensuring that the measured bytes reflect concrete `memref` layouts and copies.
 
 
-# Runtime counters and emission
+### 11.2 Runtime counters and emission
 On RVX, the runtime reads CPU cycle counters and DMA byte counters at `begin/end`. Each record is keyed by the IR handle (a stable 64-bit hash).
 
 <pre style="color:#111827; background:#f3f4f6">
@@ -489,9 +506,11 @@ record {
 
 In instrumented CPU-only builds, median overhead was about 2.1% on MNIST-sized graphs (illustrative; replace with measured values in [Table 1](#inference-time-arx)).
 
-## Cost Model Details and Selection Algorithm
+---
 
-### Timing model
+# **12. Cost Model Details and Selection Algorithm**
+
+### 12.1 Timing model
 
 For a region $R$ with tiled compute and double buffering:
 
@@ -513,12 +532,12 @@ The net benefit is
 $\Delta T(R) = T_{\mathrm{cpu}}(R) - T_{\mathrm{off}}(R)$.
 
 
-### Resource model
+### 12.2 Resource model
 
 Each candidate $c$ has a resource vector $\mathcal{R}(c)$ over {LUT, FF, DSP, BRAM, SRAM, DMA lanes}. Selection maximizes $\sum \Delta T(c)$ subject to $\sum \mathcal{R}(c) \le B$ with a benefit-density tie-breaker when budgets are tight.
 
 
-### Region formation
+### 12.3 Region formation
 
 Candidates are merged greedily into maximal regions when:
 
@@ -526,7 +545,9 @@ Candidates are merged greedily into maximal regions when:
 2.  the merged tile still fits on-chip buffers, and
 3.  the merged cost is superadditive after accounting for fewer host--device crossings.
 
-## MNIST Model Shapes and Mapping Notes
+---
+
+# **13. MNIST Model Shapes and Mapping Notes**
 
 For reproducibility and debugging, [Table 4](#mnist-shapes) lists the operator shapes used in the early evaluation.
 

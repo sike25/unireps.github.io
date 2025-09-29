@@ -1,5 +1,5 @@
 @article{mlir,
-  title   = {{MLIR}: A Compiler Infrastructure for the End of Moore's Law},
+  title   = {MLIR: A Compiler Infrastructure for the End of Moore's Law},
   author  = {Lattner, Chris and Amini, Mehdi and Bondhugula, Uday and Cohen, Albert and Davis, Andy and Pienaar, Jacques and Riddle, River and Shpeisman, Tatiana and Vasilache, Nicolas and Zinenko, Oleksandr},
   journal = {arXiv preprint arXiv:2002.11054},
   year    = {2020},
@@ -7,7 +7,7 @@
 }
 
 @inproceedings{tvm2018,
-  title     = {{TVM}: An Automated {End-to-End} Optimizing Compiler for Deep Learning},
+  title     = {TVM: An Automated End-to-End Optimizing Compiler for Deep Learning},
   author    = {Chen, Tianqi and Moreau, Thierry and Jiang, Ziheng and Zheng, Lianmin and Yan, Eddie and Shen, Haichen and Cowan, Meghan and Wang, Leyuan and Hu, Yuwei and Ceze, Luis and Guestrin, Carlos and Krishnamurthy, Arvind},
   booktitle = {13th USENIX Symposium on Operating Systems Design and Implementation (OSDI~'18)},
   year      = {2018},
@@ -18,32 +18,31 @@
 }
 
 @article{iree22tiny,
-  title   = {TinyIREE: An {ML} Execution Environment for Embedded Systems from Compilation to Deployment},
+  title   = {TinyIREE: An ML Execution Environment for Embedded Systems from Compilation to Deployment},
   author  = {Liu, Hsin-I Cindy and Brehler, Marius and Ravishankar, Mahesh and Vasilache, Nicolas and Vanik, Ben and Laurenzo, Stella},
   journal = {arXiv preprint arXiv:2205.14479},
   year    = {2022},
   url     = {https://arxiv.org/abs/2205.14479}
 }
 
-@techreport{rvv,
-  title       = {The {RISC-V} Vector Extension Version~1.0 (V)},
-  author      = {{RISC-V International}},
-  institution = {RISC-V International},
+@inproceedings{rvv,
+  title       = {The RISC-V Vector Extension Version 1.0 (V)},
+  author      = {RISC-V International},
   year        = {2024},
   note        = {Vector ISA specification v1.0},
   url         = {https://github.com/riscvarchive/riscv-v-spec/releases}
 }
 
-@misc{stablehlo,
-  title        = {StableHLO Specification},
-  author       = {{OpenXLA Project}},
-  year         = {2025},
-  howpublished = {\url{https://openxla.org/stablehlo/spec}},
-  note         = {Operation set and MLIR-based implementation}
+@article{stablehlo,
+  title   = {StableHLO Specification},
+  author  = {OpenXLA~Project},
+  year    = {2025},
+  url     = {https://openxla.org/stablehlo/spec},
+  note    = {Operation set and MLIR-based implementation},
 }
-
+  
 @misc{xla,
-  title        = {{XLA}: Optimizing Compiler for Machine Learning},
+  title        = {XLA: Optimizing Compiler for Machine Learning},
   author       = {{OpenXLA Project}},
   year         = {2025},
   howpublished = {\url{https://openxla.org/xla}},
@@ -60,22 +59,14 @@
 
 @misc{tosa,
   title        = {Tensor Operator Set Architecture (TOSA) Specification v1.0.1},
-  author       = {{Arm Ltd.} and {Linaro MLPlatform}},
+  author       = {Arm Ltd. and Linaro MLPlatform},
   year         = {2025},
   howpublished = {\url{https://www.mlplatform.org/tosa/tosa_spec.html}},
   note         = {HTML/PDF specification}
 }
 
-@misc{onnx,
-  title        = {Open Neural Network Exchange (ONNX)},
-  author       = {{LF AI \& Data Foundation}},
-  year         = {2025},
-  howpublished = {\url{https://onnx.ai/}},
-  note         = {Project homepage}
-}
-
 @article{onnxmlir2020,
-  title   = {Compiling {ONNX} Neural Network Models Using {MLIR}},
+  title   = {Compiling ONNX Neural Network Models Using MLIR},
   author  = {Jin, Tian and Bercea, Gheorghe-Teodor and Le, Tung D. and Chen, Tong and Su, Gong and Imai, Haruki and Negishi, Yasushi and Leu, Anh and O'Brien, Kevin and Kawachiya, Kiyokuni and Eichenberger, Alexandre E.},
   journal = {arXiv preprint arXiv:2008.08272},
   year    = {2020},
@@ -83,7 +74,7 @@
 }
 
 @misc{mlir-linalg,
-  title        = {{MLIR} 'linalg' Dialect},
+  title        = {MLIR 'linalg' Dialect},
   author       = {{LLVM Project}},
   year         = {2025},
   howpublished = {\url{https://mlir.llvm.org/docs/Dialects/Linalg/}},
@@ -91,7 +82,7 @@
 }
 
 @misc{mlir-memref,
-  title        = {{MLIR} 'memref' Dialect},
+  title        = {mlir 'memref' Dialect},
   author       = {{LLVM Project}},
   year         = {2025},
   howpublished = {\url{https://mlir.llvm.org/docs/Dialects/MemRef/}},
@@ -154,7 +145,7 @@
 }
 
 @article{cva6,
-   author={F. {Zaruba} and L. {Benini}},
+   author={F. Zaruba and L. Benini},
    journal={IEEE Transactions on Very Large Scale Integration (VLSI) Systems},
    title={The Cost of Application-Class Processing: Energy and Performance Analysis of a Linux-Ready 1.7-GHz 64-Bit RISC-V Core in 22-nm FDSOI Technology},
    year={2019},
@@ -323,18 +314,16 @@ series = {ASPLOS '18}
   booktitle={2015 ACM/IEEE 42nd Annual International Symposium on Computer Architecture (ISCA)}, 
   title={ShiDianNao: Shifting vision processing closer to the sensor}, 
   year={2015},
-  volume={},
-  number={},
   pages={92-104},
   keywords={Kernel;Neural networks;Sensors;Energy efficiency;Smart phones;Filtering;Neurons},
   doi={10.1145/2749469.2750389}}
 
-@misc{circt,
+@article{circt,
   title        = {CIRCT: Circuit IR Compilers and Tools},
-  author       = {{LLVM Project}},
+  author       = {LLVM Project},
   year         = {2025},
-  howpublished = {\url{https://circt.llvm.org/}},
-  note         = {MLIR-based hardware dialects and RTL export}
+  url         = {https://circt.llvm.org/},
+  journal    = {MLIR-based hardware dialects and RTL export}
 }
 
 @misc{handshake,
@@ -371,7 +360,7 @@ series = {ASPLOS '18}
 }
 
 @inproceedings{dynamatic,
-author = {Josipovi\'{c}, Lana and Ghosal, Radhika and Ienne, Paolo},
+author = {Josipovi\'c, Lana and Ghosal, Radhika and Ienne, Paolo},
 title = {Dynamically Scheduled High-level Synthesis},
 year = {2018},
 isbn = {9781450356145},
@@ -388,13 +377,13 @@ location = {Monterey, CALIFORNIA, USA},
 series = {FPGA '18}
 }
 
-
-@misc{mliraie,
-  title        = {mlir-aie: MLIR-based Compiler for Xilinx/AMD AI Engine},
-  author       = {{AMD/Xilinx}},
-  year         = {2024},
-  howpublished = {\url{https://github.com/Xilinx/mlir-aie}},
-  note         = {MLIR dialects and tools for AI Engine/CGRA targets}
+@inproceedings{mliraie,
+  title={Efficiency, Expressivity, and Extensibility in a Close-to-Metal NPU Programming Interface},
+  author={Hunhoff, Erika and Melber, Joseph and Denolf, Kristof and Bisca, Andra and Bayliss, Samuel and Neuendorffer, Stephen and Fifield, Jeff and Lo, Jack and Vasireddy, Pranathi and James-Roxby, Phil and others},
+  booktitle={2025 IEEE 33rd Annual International Symposium on Field-Programmable Custom Computing Machines (FCCM)},
+  pages={85--94},
+  year={2025},
+  organization={IEEE}
 }
 
 @inproceedings{calyx,
