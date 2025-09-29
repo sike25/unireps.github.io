@@ -121,8 +121,11 @@ A device manifest (MMIO ranges, IRQ lines) is also emitted for RVX integration.
 A YAML/JSON accelerator description regenerates the `arx` capability model and converters, enabling recompilation without model changes. Deployed binaries feed fresh RVX profiles back into the cost model, which updates efficiencies and re-ranks candidates for the next iteration.
 
 
-# ADD IMAGE TO HERE
 <a id="flow"></a>
+<!-- ![My Image](/blog/assets/img/2025-09-29-mlir-arx-accelerator-aware-mlir-to-risc-v-compilation-integrated-with-an-eda-flow/01_system_overview.png) -->
+<div style="text-align: center;">
+  <img src="/blog/assets/img/2025-09-29-mlir-arx-accelerator-aware-mlir-to-risc-v-compilation-integrated-with-an-eda-flow/01_system_overview.png" alt="My Image" width="700" />
+</div>
 
 ---
 
