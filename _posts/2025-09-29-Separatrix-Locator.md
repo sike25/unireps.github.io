@@ -2,7 +2,8 @@
 layout: distill
 title: Separatrix Locator
 description: Finding Separatrices with Deep squashed Koopman Eigenfunctions
-tags: distill formatting
+# tags: #dynamical_system #recurrent_neural network #reverse engineering
+categories: [dynamical system, recurrent neural network, reverse engineering]
 giscus_comments: true
 date: 2025-09-28
 featured: true
@@ -26,18 +27,19 @@ bibliography: 2025-09-29-Separatrix-Locator.bib
 #   - we may want to automate TOC generation in the future using
 #     jekyll-toc plugin (https://github.com/toshimaru/jekyll-toc).
 toc:
-  - name: "Introduction: Beyond Fixed Points"
+  - name: "Introduction: Fixed Points and beyond"
     subsections:
+    - name: "Finding fixed points"
     - name: "Setting"
   - name: "The Sandwich of Bistability"
+  - name: "(squashed) Koopman Eigenfunctions"
   - name: "Enter Deep Neural Networks"
-    subsections:
-    - name: "Degeneracies and how to fight them"
-  - name: "Relation to Koopman theory"
+  - name: "Does it work?"
   - name: "Tips and tricks"
     subsections:
     - name: "Architecture"
     - name: "Scaling x"
+    - name: "Ensuring |ψ|<1 at initialisation and that ⟨ψ⟩≈0"
 
 
 # Below is an example of injecting additional post-specific styles.
@@ -93,12 +95,22 @@ _styles: >
   }
 ---
 
+## TL;DR
+Seperatrices! These are boundaries between basins of attraction in dynamical systems. In high-dimensional systems like Recurrent neural networks, finding these boundaries can help reverse engineer their mechanism, or design optimal perturbations. But finding them is far from trivial. We recently developed a numerical method, based on approximating a Koopman Eigenfunction (KEF) of the dynamics using a deep neural network (DNN) <d-cite key="dabholkar_finding_2025"></d-cite>. While this approach works, these KEFs suffer from singularities at attractors, which makes them difficult targets for DNNs to approximate. In this blogpost we explain our original method, and also improve it by using a variant we call *squashed Koopman Eigenfunctions* (sKEFs), which alleviate the singularities. We show how they are linked to KEFs and replicate our results from the paper.
+
+**Code**: We provide a Python package implementing this method at [github.com/KabirDabholkar/separatrix_locator](https://github.com/KabirDabholkar/separatrix_locator).
+
+
+
+<!-- We recently developed a numerical method to finding separatrices -- the boundaries between basins of attraction -- in high-dimensional dynamical systems like Recurrent Neural Networks <d-cite key="dabholkar_finding_2025"></d-cite>. This approach involves approximating a Koopman Eigenfunction (KEF) of the dynamics using a deep neural networks (DNNs). While this approach works, these KEFs suffer from singularities at attractors, which makes them difficult targets for DNNs to approximate. In this blogpost we improve on our method using a variant we call *squashed Koopman Eigenfunctions* (sKEFs), which alleviate the singularities. We show how they are linked to KEFs and replicate our results from the paper. -->
+
+
 
 
 ## Introduction: Fixed Points and beyond
 Many natural and artificial systems — from neural circuits making decisions to ecosystems switching between healthy and diseased states — are modeled as **multistable dynamical systems**. Their behavior is governed by multiple **attractors** in state space, each corresponding to a stable mode of activity. Understanding these systems often boils down to understanding their **geometry**: where are the stable states, and how are the different basins of attraction separated?
 
-For the last decade, a workhorse of neural circuit analysis has been **fixed point analysis**. By finding points where the flow vanishes and linearizing around them, one can uncover local motifs underlying computation: line attractors, saddle structures, rotational channels, and so on. This has yielded powerful insights into how trained RNNs implement cognitive tasks.
+For the last decade, a workhorse of neural circuit analysis has been **fixed point analysis**. By finding points where the flow vanishes and linearizing around them, one can uncover local motifs underlying computation: line attractors, saddle points, limit cycles, and so on. This has yielded powerful insights into how trained RNNs implement cognitive tasks.
 
 ### Finding fixed points
 First consider a bistable dynamical system in 2 dimensions. Below is a phase-portrait of such a system, with two stable fixed points and one unstable fixed point. Click on plot to realise trajectories of the dynamics.
@@ -495,7 +507,7 @@ $$
 $$
 
 
-We’ll soon see that this translates to squashed KEFs as well. First, consider a smooth KEF $$\phi^1$$ with $$\lambda = 1$$ that vanishes only on the separatrix (what we want). Now, consider a piecewise-constant function $$\phi^0$$ with $$\lambda = 0$$ that is equal to 1 on one basin, and zero on another basin. takes constant values within each basin and may be discontinuous at the separatrix. The product $$\phi^1 \phi^0$$ remains a valid KEF with $$\lambda = 1$$, but it can now be zero across entire basins—thereby destroying the separatrix structure we aim to capture. Because of the relation between KEFs and sKEFs, this problem carries over to our squashed case.
+We’ll soon see that this translates to squashed KEFs as well. First, consider a smooth KEF $$\phi^1$$ with $$\lambda = 1$$ that vanishes only on the separatrix (what we want). Now, consider a piecewise-constant function $$\phi^0$$ with $$\lambda = 0$$ that is equal to 1 on one basin, and zero on another basin. The product $$\phi^1 \phi^0$$ remains a valid KEF with $$\lambda = 1$$, but it can now be zero across entire basins—thereby destroying the separatrix structure we aim to capture. Because of the relation between KEFs and sKEFs, this problem carries over to our squashed case.
 To mitigate this problem, we add another regularizer that causes the average value of $$\psi$$ to be zero, encouraging negative and positive values on both sides of the separatrix.
 
 </details>
@@ -514,10 +526,26 @@ If $$\mu=0$$ for instance, the $$x$$ dimension is ignored. To mitigate this, we 
 ## Does it work?
 
 Now that we know what we are looking for (PDE equation), and how to find it (DNN), let’s put it all together.
-We train a DNN on a nonlinear oscillator, and on a 2D GRU trained on a 1-bit flip-flop task. In both cases, the resulting $$\psi$$ has a zero level set on the separatrix.
+We train a DNN on a bistable damped oscillator, and on a 2D GRU trained on a 1-bit flip-flop task. In both cases, the resulting $$\psi$$ has a zero level set on the separatrix.
+
+<div style="text-align: center;">
+  <img src="/blog/assets/img/2025-09-29-Separatrix-Locator/two_2D_examples_squashed.png" alt="Two 2D Examples" width="100%" />
+  <div style="max-width: 500px; margin: 0.5rem auto; text-align: center;">
+    <em><strong>A</strong>: ODEs for the damped duffing oscillator. <strong>B</strong>: Kinetic energy function identifies stable and unstable fixed points. <strong>C</strong>: DNN approximation of the sKEF and it's level sets. The zero-level set (orange) aligns with the separatrix. <strong>D,E,F</strong> Same for a 2D GRU RNN trained on a 1-bit flip flop task. </em>
+  </div>
+</div>
+
 
 Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurons from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **F**). We then run many simulations via a binary-search along each curve (parameterized by $$\alpha\in[0,1]$$) to find the true separatrix crossing, and compare with $$\psi=0$$, finding close agreement (Fig. **G**).
 
+<div style="text-align: center;">
+  <img src="/blog/assets/img/2025-09-29-Separatrix-Locator/finkelstein_blog.png" alt="Two 2D Examples" width="100%" />
+  <div style="max-width: 500px; margin: 0.5rem auto; text-align: center;">
+    <em><strong>A</strong>: Hermite curves connecting attractors of a data-trained RNN <d-cite key="finkelstein_attractor_2021"></d-cite> with true separatrix points (red). <strong>B</strong> sKEF zeroes versus true separatrix points along each curve (2D projection from 668D). <strong>C</strong> Norm of perturbations to reach separatrix from base point $\boldsymbol{x}_\text{base}$. </em>
+  </div>
+</div>
+
+<!-- 
 ## Tips and tricks
 
 Sometimes training fails. Here are some things to know. We have not run systematic tests on all of these: it's more from trial and error. So take them with a grain of salt.
@@ -533,4 +561,4 @@ Choices that improve training convergence:
 
 Mind the saturation of `tanh`. Normalise or whitten $$\boldsymbol{x}$$ before feeding to the DNN so that it doesn't saturate the activation function. We include this as a fixed scalar parameter in the forward pass definition so that it's part of $$\psi(\boldsymbol x)$$ and not a separate pre-processing step.
 
-### Ensuring $$\vert\psi\vert<1$$ at initialisation and that $$\langle\psi\rangle\approx0$$.
+### Ensuring $$\vert\psi\vert<1$$ at initialisation and that $$\langle\psi\rangle\approx0$$. -->

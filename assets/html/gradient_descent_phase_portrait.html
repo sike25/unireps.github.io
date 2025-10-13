@@ -286,7 +286,10 @@
           const u = (i / cols) * rect.width;
           const v = (j / rows) * rect.height;
           const [x, y] = canvasToWorld(u, v);
-          const qVal = Math.pow(q(x, y), 0.1);
+          const qRaw = q(x, y);
+          // Use log transform, adding small epsilon to avoid log(0)
+          // const qVal = Math.log(qRaw);
+          const qVal = Math.pow(qRaw, 0.1);
           qValues[j][i] = qVal;
           minQ = Math.min(minQ, qVal);
           maxQ = Math.max(maxQ, qVal);
