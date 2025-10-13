@@ -245,7 +245,171 @@ $$\begin{equation}
 \label{eq:KEF}
 \end{equation}$$
 
-Infact, the two problems are closely related. We can show that solutions to $$\eqref{eq:KEF}$$ can be transformed into solutions of $$\eqref{eq:sKEF_compact}$$ and vice versa.
+Infact, the two problems are closely related. We can show that solutions to $$\eqref{eq:KEF}$$ can be transformed into solutions of $$\eqref{eq:sKEF_compact}$$ and vice versa by *squashing* and *unsquashing*.
+If $$\phi$$ is a solution to $$\eqref{eq:KEF}$$, then we can obtain a solution $$\psi$$ to $$\eqref{eq:sKEF_compact}$$ via:
+
+$$\begin{equation}
+    \psi(\boldsymbol{x}) = \frac{ \phi(\boldsymbol{x})}{ \sqrt{1+\phi(\boldsymbol{x})^2} }  \label{eq:squash} \tag{squash}
+\end{equation}$$
+
+Conversely, if $$\psi$$ is a solution to $$\eqref{eq:sKEF_compact}$$, then we can obtain a solution $$\phi$$ to $$\eqref{eq:KEF}$$ via:
+
+$$\begin{equation}
+    \phi(\boldsymbol{x}) = \frac{ \psi(\boldsymbol{x})}{ \sqrt{1-\psi(\boldsymbol{x})^2} }  \label{eq:unsquash} \tag{unsquash}
+\end{equation}$$
+
+We provide an informal derivation.
+
+<details markdown="1">
+<summary>Derivation: From eigenfunction to squashed eigenfunction and back</summary>
+
+To do this, define the pointwise transforms
+$$
+\psi \;=\; u(\phi) \;:=\; \frac{\phi}{\sqrt{1+\phi^2}}, 
+\qquad
+\phi \;=\; v(\psi) \;:=\; \frac{\psi}{\sqrt{1-\psi^2}}.
+$$
+
+---
+
+First we will derive useful identity: the chain rule for the Koopman generator. 
+
+### Koopman chain rule
+
+Let $\phi:\mathbb R^N \to \mathbb R$ be a smooth scalar observable, and let $u:\mathbb R \to \mathbb R$ be a smooth scalar nonlinearity. Let
+$$
+\psi(\boldsymbol x) = u(\phi(\boldsymbol x)).
+$$
+
+The Koopman generator is
+
+$$
+\mathcal K g(\boldsymbol x) = \nabla g(\boldsymbol x)\cdot f(\boldsymbol x),
+$$
+
+for any $$g$$ where $$f(\boldsymbol x)$$ is the underlying vector field.
+
+By the multivariable chain rule for gradients,
+
+$$
+\nabla \psi(\boldsymbol x) 
+= u'\big(\phi(\boldsymbol x)\big)\,\nabla \phi(\boldsymbol x).
+$$
+
+Applying the Koopman generator gives
+
+$$
+\mathcal K \psi(\boldsymbol x) 
+= \nabla \psi(\boldsymbol x)\cdot f(\boldsymbol x)
+= u'\big(\phi(\boldsymbol x)\big)\,\nabla \phi(\boldsymbol x)\cdot f(\boldsymbol x)
+= u'\big(\phi(\boldsymbol x)\big)\,\mathcal K \phi(\boldsymbol x).
+$$
+
+Therefore, for any smooth $u$ and $\phi$,
+
+$$
+\boxed{\;\mathcal K[u(\phi)] = u'(\phi)\,\mathcal K\phi\; }.
+$$
+
+---
+
+### From $\mathcal K\phi=\lambda\phi$ to $\mathcal K\psi=\lambda(\psi-\psi^3)$
+
+Assume
+$$
+\mathcal K\phi \;=\; \lambda \phi.
+$$
+
+Recall that $$\psi = u(\phi)$$ where $$u(z)=\dfrac{z}{\sqrt{1+z^2}}$$. Compute $$u'(z)$$:
+
+$$
+\begin{align*}
+u'(z) &= (1+z^2)^{-\frac{1}{2}} + z\cdot\Big(-\frac{1}{2}\Big)(1+z^2)^{-\frac{3}{2}}\cdot (2z) \\[2pt]
+&= (1+z^2)^{-\frac{1}{2}} - z^2(1+z^2)^{-\frac{3}{2}} \\[2pt]
+&= \frac{1+z^2-z^2}{(1+z^2)^{\frac{3}{2}}} \\[2pt]
+&= \frac{1}{(1+z^2)^{\frac{3}{2}}}
+\end{align*}
+$$
+
+By the Koopman chain rule,
+
+$$
+\mathcal K\psi \;=\; u'(\phi)\,\mathcal K\phi
+\;=\; \frac{1}{(1+\phi^2)^{3/2}}\,\lambda\phi
+\;=\; \lambda\,\frac{\phi}{(1+\phi^2)^{3/2}}.
+$$
+
+But
+
+$$
+\psi - \psi^3
+= \frac{\phi}{\sqrt{1+\phi^2}} - \frac{\phi^3}{(1+\phi^2)^{3/2}}
+= \frac{\phi(1+\phi^2)-\phi^3}{(1+\phi^2)^{3/2}}
+= \frac{\phi}{(1+\phi^2)^{3/2}}.
+$$
+
+Hence
+$$
+\boxed{\;\mathcal K\psi \;=\; \lambda(\psi-\psi^3)\; }.
+$$
+
+---
+
+### From $\mathcal K\psi=\lambda(\psi-\psi^3)$ back to $\mathcal K\phi=\lambda\phi$
+
+Assume
+$$
+\mathcal K\psi \;=\; \lambda(\psi-\psi^3).
+$$
+
+Recall that $$\phi = v(\psi)$$ where $$v(z)=\dfrac{z}{\sqrt{1-z^2}}$$. Compute $$v'(z)$$:
+
+$$
+\begin{align*}
+v'(z) &= (1-z^2)^{-\frac{1}{2}} + z\cdot\frac{1}{2}(1-z^2)^{-\frac{3}{2}}\cdot (2z) \\[2pt]
+&= (1-z^2)^{-\frac{1}{2}} + z^2(1-z^2)^{-\frac{3}{2}} \\[2pt]
+&= \frac{1}{(1-z^2)^{\frac{3}{2}}}
+\end{align*}
+$$
+
+Apply the Koopman chain rule with $$\phi=v(\psi)$$:
+
+$$
+\mathcal K\phi \;=\; v'(\psi)\,\mathcal K\psi
+\;=\; \frac{1}{(1-\psi^2)^{3/2}}\,\lambda(\psi-\psi^3)
+\;=\; \lambda\,\frac{\psi(1-\psi^2)}{(1-\psi^2)^{3/2}}
+\;=\; \lambda\,\frac{\psi}{\sqrt{1-\psi^2}}
+\;=\; \lambda\,\phi.
+$$
+
+Thus
+$$
+\boxed{\;\mathcal K\phi \;=\; \lambda \phi\; }.
+$$
+
+---
+
+### Conclusion
+
+The pointwise transforms
+$$
+\psi = u(\phi) = \frac{\phi}{\sqrt{1+\phi^2}},
+\qquad
+\phi = v(\psi) = \frac{\psi}{\sqrt{1-\psi^2}}
+$$
+
+carry solutions of the linear Koopman eigenfunction equation to solutions of the cubic equation and back:
+$$
+\mathcal K\phi=\lambda\phi
+\quad\Longleftrightarrow\quad
+\mathcal K\psi=\lambda(\psi-\psi^3).
+$$
+
+
+</details>
+
+Note that this derivation highly non-rigorous. We gloss over the square integrability of $$\psi$$ and $$\phi$$, and even whether they are defined everywhere in $$\mathbb R^N$$. According to our sandwich of bistability, we expect $$\psi(\boldsymbol {x^*})=\pm1$$ at the attractors. According to $$\eqref{eq:unsquash}$$, $$\phi(\boldsymbol {x^*})=\pm\infty$$,
+
 
 <!-- By the chain rule, the left hand side of equation $$\eqref{eq:sKEF}$$ is: -->
 
@@ -265,7 +429,7 @@ $$\begin{equation}
 
 <!-- If we can find a function $$\psi$$ that satisfies this PDE, then its zero level set will be the separatrix we seek, right? Not quite, unfortunately $$\eqref{eq:sKEFPDE}$$ also admits several unhelpful solutions. We address these in [Degeneracies and how to fight them](#degeneracies-and-how-to-fight-them). Solutions to  -->
 
-But the first challenge is to solve this PDE for high-dimensional nonlinear system. This is where deep neural networks come in...
+<!-- But the first challenge is to solve this PDE for high-dimensional nonlinear system. This is where deep neural networks come in... -->
 
 
 ## Enter Deep Neural Networks 
