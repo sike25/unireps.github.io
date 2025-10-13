@@ -45,8 +45,16 @@
             <line x1="200" y1="30" x2="200" y2="270" stroke="#333" stroke-width="2"/>
             
             <!-- Axis labels -->
-            <text x="360" y="155" font-size="14" fill="#333">ψ</text>
-            <text x="205" y="25" font-size="14" fill="#333">ψ̇</text>
+            <foreignObject x="360" y="145" width="30" height="20">
+                <div xmlns="http://www.w3.org/1999/xhtml" style="font-size: 14px; color: #333;">
+                    \(\psi\)
+                </div>
+            </foreignObject>
+            <foreignObject x="205" y="15" width="30" height="20">
+                <div xmlns="http://www.w3.org/1999/xhtml" style="font-size: 14px; color: #333;">
+                    \(\dot{\psi}\)
+                </div>
+            </foreignObject>
             
             <!-- Tick marks and labels on x-axis (will be positioned by JavaScript) -->
             <g id="ticks"></g>

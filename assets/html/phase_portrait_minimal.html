@@ -208,15 +208,13 @@
     ctx.stroke();
     ctx.setLineDash([]);
     
-    // Label separatrix
-    const midX = (xStart + xEnd) / 2;
-    const midY = -midX;
-    const [uLabel, vLabel] = worldToCanvas(midX, midY);
+    // Label separatrix (positioned at top-left)
     ctx.fillStyle = '#ff6600';
-    ctx.font = '14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('separatrix', uLabel, vLabel - 8);
+    ctx.font = 'bold 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const labelPadding = 10;
+    ctx.fillText('separatrix', labelPadding, labelPadding);
     
     // 2. Stable fixed points at (-1, 0) and (1, 0)
     ctx.fillStyle = '#00ff00';
@@ -229,11 +227,15 @@
       ctx.arc(u, v, 6, 0, 2 * Math.PI);
       ctx.fill();
       
-      // Label next to each point
-      ctx.textAlign = x < 0 ? 'right' : 'left';
-      ctx.textBaseline = 'middle';
-      const offset = x < 0 ? -10 : 10;
-      ctx.fillText('stable fixed point', u + offset, v);
+      // Label below each point (3 lines)
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const offset = 10;
+      const lineHeight = 14;
+      const labels = ['stable', 'fixed', 'point'];
+      labels.forEach((label, i) => {
+        ctx.fillText(label, u, v + offset + i * lineHeight);
+      });
     }
     
     // 3. Unstable fixed point at (0, 0) - draw a cross
@@ -248,12 +250,16 @@
     ctx.lineTo(u0 + crossSize, v0 - crossSize);
     ctx.stroke();
     
-    // Label unstable fixed point
+    // Label unstable fixed point (positioned below, 3 lines)
     ctx.fillStyle = '#ff6600';
     ctx.font = '13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('unstable fixed point', u0 + 12, v0);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const unstableLabels = ['unstable', 'fixed', 'point'];
+    const unstableLineHeight = 14;
+    unstableLabels.forEach((label, i) => {
+      ctx.fillText(label, u0, v0 + 10 + i * unstableLineHeight);
+    });
     
     ctx.restore();
   }

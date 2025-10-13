@@ -106,18 +106,20 @@ First consider a bistable dynamical system in 2 dimensions. Below is a phase-por
 <div class="l-body" style="text-align: center; margin: 2rem 0;">
   <iframe src="/blog/assets/html/clickable_phase_portrait_simple.html" 
           scrolling="no"
-          style="width: 100%; height: 600px; border: none; border-radius: 8px; overflow: hidden;">
+          style="width: 80%; height: 400px; border: none; border-radius: 8px; overflow: hidden;">
   </iframe>
 </div>
 
-Trajectories converge to either one of the two fixed points. This naturally provides an algorithm to find the stable fixed points: just run evolve the dynamics from many initial conditions.
+Trajectories converge to either one of the two fixed points. This naturally provides an algorithm to find the stable fixed points: just run the dynamics from many initial conditions.
 
-Notice, however, that it is challenging to plot a trajectory that precisely intercepts the unstable fixed point due to it's repulsivity. This motivates developing a principled way to find such points. One solution is to define a specific scalar function of the dynamics whose only minima are given by all the fixed points. One such function is the kinetic energy $$q(\boldsymbol x)=\frac{1}{2}\Vert f(\boldsymbol x)\Vert^2$$ <d-cite key="sussillo_opening_2013,golub_fixedpointfinder_2018"></d-cite>. By differentiating this function, one can perform gradient descent to find these minima. The interactive plot below realises such trajectories.
+Now try to click somewhere that will lead you exactly to the saddle point. Did you succeed? It's almost impossible.
+
+This motivates developing a principled way to find such points. One solution is to define a specific scalar function of the dynamics whose only minima are given by all the fixed points. One such function is the kinetic energy $$q(\boldsymbol x)=\frac{1}{2}\Vert f(\boldsymbol x)\Vert^2$$ <d-cite key="sussillo_opening_2013,golub_fixedpointfinder_2018"></d-cite>. By differentiating this function, one can perform gradient descent to find these minima. The interactive plot below realises such trajectories.
 
 <div class="l-body" style="text-align: center; margin: 2rem 0;">
   <iframe src="/blog/assets/html/gradient_descent_phase_portrait.html" 
           scrolling="no"
-          style="width: 100%; height: 600px; border: none; border-radius: 8px; overflow: hidden;">
+          style="width: 80%; height: 400px; border: none; border-radius: 8px; overflow: hidden;">
   </iframe>
 </div>
 
@@ -134,11 +136,11 @@ Below is an example of such a function that we constructed for this simple syste
 <div class="l-body" style="text-align: center; margin: 2rem 0;">
   <iframe src="/blog/assets/html/absolute_value_gradient_descent.html" 
           scrolling="no"
-          style="width: 100%; height: 600px; border: none; border-radius: 8px; overflow: hidden;">
+          style="width: 80%; height: 400px; border: none; border-radius: 8px; overflow: hidden;">
   </iframe>
 </div>
 
-We provide a method to approximate such functions using deep neural network to find separatrices in multistable dynamical systems embedded in high-dimensions.
+Our main contribution is a numerical method to approximate such functions using deep neural networks in order to find separatrices in multistable dynamical systems in high-dimensions.
 
 <!-- > This is the central idea behind **(squashed) Koopman eigenfunctions**. -->
 
@@ -165,7 +167,7 @@ governing the state  $$\boldsymbol{x} \in \mathbb R^N$$,
 where $$\dot \square$$ is shorthand for the time derivative $$\frac{d}{dt}\square$$ and $$f: \mathbb R^N \to \mathbb R^N$$ defines the dynamical flow.
 
 > **The Goal:**  
-> Find a smooth scalar function $$\psi:\mathbb{R}^N\to\mathbb{R}$$ that encodes the distance from the separatix, i.e., $$\psi(\boldsymbol x)=0$$ for $$x\in\text{separatix}$$ and grows as it moves away from the separatrix.
+> Find a smooth scalar function $$\psi:\mathbb{R}^N\to\mathbb{R}$$ that grows as we move away from the separatix, i.e., $$\psi(\boldsymbol x)=0$$ for $$x\in\text{separatix}$$ and grows as it moves away from the separatrix.
 {: .goal-box #goal}
 
 
@@ -223,29 +225,32 @@ It seems that finding solutions to $$\eqref{eq:sKEF}$$ could be the key to const
 
 At this stage, it's worth noticing that the left hand side of $$\eqref{eq:sKEF}$$ is actually a known object called the [Lie derivative](https://en.wikipedia.org/wiki/Lie_derivative) of $$\psi$$ along the flow given by $$f$$, and also known as the infinitesimal generator of the [Koopman operator](https://en.wikipedia.org/wiki/Composition_operator), (See <d-cite key="brunton_notes_2019"></d-cite>).
 
-To make this link explicit, we first define the propogator function $$F_\tau(x(t)):=x(t+\tau)$$ where $x(t)$ is any solution to $$\eqref{eq:ODE}$$. The Koopman operator $$\mathcal K_\tau$$ is defined as 
+To make this link explicit, we first define the propagator function $$F_\tau(x(t)):=x(t+\tau)$$ where $$x(t)$$ is any solution to $$\eqref{eq:ODE}$$. The Koopman operator $$\mathcal K_\tau$$ is defined as 
 
 $$\mathcal K_\tau g = g \circ F_\tau$$
 
-where $$g$$ is any<d-footnote>$$g$$ must belong to a Hilbert space, meaning that it must come with inner product (and it's associated norm), e.g., $$\langle f,g\rangle:=\int_{\mathbb R^N}f(\boldsymbol x)g(\boldsymbol x)d\boldsymbol x$$ thus requiring that the function be square integrable.</d-footnote> scalar function of the state-space $$\mathbb R^N$$. Its infinitesimal generator $$\mathcal K$$ (dropping the subscript) is essentially a time-derivative:
+where $$g$$ is any<d-footnote>\(g\) must belong to a Hilbert space, meaning that it must come with inner product (and it's associated norm), e.g., $$\langle f,g\rangle:=\int_{\mathbb R^N}f(\boldsymbol x)g(\boldsymbol x)d\boldsymbol x$$ thus requiring that the function be square integrable.</d-footnote> scalar function of the state-space $$\mathbb R^N$$. Its infinitesimal generator $$\mathcal K$$ (dropping the subscript) is essentially a time-derivative:
 
-$$\mathcal Kg = \lim_{\tau\to0} \frac{\mathcal K_\tau g - g}{\tau} =\lim_{\tau\to0} \frac{g\circ F_\tau - g}{\tau} = \frac{d}{d\tau} g \circ F_\tau\bigg\vert_{\tau=0}.$$
+$$\begin{equation}
+\mathcal Kg = \lim_{\tau\to0} \frac{\mathcal K_\tau g - g}{\tau} =\lim_{\tau\to0} \frac{g\circ F_\tau - g}{\tau} = \frac{d}{d\tau} g \circ F_\tau\bigg\vert_{\tau=0}.
+\label{eq:koopman_generator}
+\end{equation}$$
 
-The last version if evaluated on a trajectory $$x(t)$$ is the left hand side of $$\eqref{eq:sKEF}$$, allowing us to re-writing it compactly as 
+The last version if evaluated on a trajectory $$x(t)$$ is the left hand side of $$\eqref{eq:sKEF}$$, allowing us to rewrite it compactly as 
 
 $$\begin{equation}
 \mathcal K\psi = \lambda (\psi-\psi^3).
 \label{eq:sKEF_compact}
 \end{equation}$$
 
-Notice that this almost an eigenfunction equation, if we drop the cubic term: 
+This equation is *almost* an eigenfunction equation. All we need is to drop the cubic term: 
 
 $$\begin{equation}
 \mathcal K\phi = \lambda \phi.
 \label{eq:KEF}
 \end{equation}$$
 
-Infact, the two problems are closely related. We can show that solutions to $$\eqref{eq:KEF}$$ can be transformed into solutions of $$\eqref{eq:sKEF_compact}$$ and vice versa by *squashing* and *unsquashing*.
+In fact, the two problems are closely related. We can show that solutions to $$\eqref{eq:KEF}$$ can be transformed into solutions of $$\eqref{eq:sKEF_compact}$$ and vice versa by *squashing* and *unsquashing*.
 If $$\phi$$ is a solution to $$\eqref{eq:KEF}$$, then we can obtain a solution $$\psi$$ to $$\eqref{eq:sKEF_compact}$$ via:
 
 $$\begin{equation}
@@ -276,7 +281,7 @@ First we will derive useful identity: the chain rule for the Koopman generator.
 
 ### Koopman chain rule
 
-Let $\phi:\mathbb R^N \to \mathbb R$ be a smooth scalar observable, and let $u:\mathbb R \to \mathbb R$ be a smooth scalar nonlinearity. Let
+Let $$\phi:\mathbb R^N \to \mathbb R$$ be a smooth scalar observable, and let $$u:\mathbb R \to \mathbb R$$ be a smooth scalar nonlinearity. Let
 $$
 \psi(\boldsymbol x) = u(\phi(\boldsymbol x)).
 $$
@@ -305,7 +310,7 @@ $$
 = u'\big(\phi(\boldsymbol x)\big)\,\mathcal K \phi(\boldsymbol x).
 $$
 
-Therefore, for any smooth $u$ and $\phi$,
+Therefore, for any smooth $$u$$ and $$\phi$$,
 
 $$
 \boxed{\;\mathcal K[u(\phi)] = u'(\phi)\,\mathcal K\phi\; }.
@@ -313,7 +318,7 @@ $$
 
 ---
 
-### From $\mathcal K\phi=\lambda\phi$ to $\mathcal K\psi=\lambda(\psi-\psi^3)$
+### From $$\mathcal K\phi=\lambda\phi$$ to $$\mathcal K\psi=\lambda(\psi-\psi^3)$$
 
 Assume
 $$
@@ -355,7 +360,7 @@ $$
 
 ---
 
-### From $\mathcal K\psi=\lambda(\psi-\psi^3)$ back to $\mathcal K\phi=\lambda\phi$
+### From $$\mathcal K\psi=\lambda(\psi-\psi^3)$$ back to $$\mathcal K\phi=\lambda\phi$$
 
 Assume
 $$
@@ -408,7 +413,7 @@ $$
 
 </details>
 
-Note that this derivation highly non-rigorous. We gloss over the square integrability of $$\psi$$ and $$\phi$$, and even whether they are defined everywhere in $$\mathbb R^N$$. According to our sandwich of bistability, we expect $$\psi(\boldsymbol {x^*})=\pm1$$ at the attractors. According to $$\eqref{eq:unsquash}$$, $$\phi(\boldsymbol {x^*})=\pm\infty$$,
+Note that this derivation is highly non-rigorous. We gloss over the square integrability of $$\psi$$ and $$\phi$$, and even whether they are defined everywhere in $$\mathbb R^N$$. According to our sandwich of bistability, we expect $$\psi(\boldsymbol {x^*})=\pm1$$ at the attractors. According to $$\eqref{eq:unsquash}$$, $$\phi(\boldsymbol {x^*})=\pm\infty$$,
 
 
 <!-- By the chain rule, the left hand side of equation $$\eqref{eq:sKEF}$$ is: -->
@@ -433,11 +438,85 @@ $$\begin{equation}
 
 
 ## Enter Deep Neural Networks 
-### Degeneracies and how to fight them
 
 
-## Relation to Koopman theory
+Now that we know the properties of the desired $$\psi$$, it’s time to find it. So how do we solve the $$\eqref{eq:sKEF}$$ for a high-dimensional nonlinear system. This is where deep neural networks (DNNs) come in...
 
+First we re-write $$\eqref{eq:sKEF}$$ as a partial differential equation (PDE):
+
+$$\begin{equation}
+\nabla_{\boldsymbol{x}}\psi(\boldsymbol{x}) \cdot f(\boldsymbol{x}) = \lambda[\psi(\boldsymbol{x}) - \psi(\boldsymbol{x})^3],
+\label{eq:sKEFPDE}
+\end{equation}$$
+
+recognising that $$\mathcal Kg=\nabla g \cdot f$$ is another way to write the Koopman generator, using the multivariate chain rule on $$\eqref{eq:koopman_generator}$$. This PDE means that instead of running the ODE $$\eqref{eq:ODE}$$ to get trajectories $$\boldsymbol x(t)$$, we can instead leverage the ability of DNNs to solve PDEs.
+
+We formulate a mean squared error loss for PDE $$\eqref{eq:sKEFPDE}$$: 
+
+$$ \begin{equation}
+ \mathcal{L}_{\text{PDE}} = \mathbb{E}_{\boldsymbol{x} \sim p(\boldsymbol{x})} \Bigg[ \nabla \psi(\boldsymbol{x}) \cdot f(\boldsymbol{x}) - \lambda \Big(\psi(\boldsymbol{x})-\psi(\boldsymbol{x})^3\Big) \Bigg]^2,
+\label{eq:pde_loss}
+\end{equation}
+$$
+
+where $$p(\boldsymbol{x})$$ is a distribution over the phase space <d-cite key="e_deep_2018,sirignano_dgm_2018"></d-cite>. We can now parameterise $$\psi$$ using a DNN, and train it's weights to optimise $$\eqref{eq:pde_loss}$$. This gradient-based PDE formulation is particularly convenient for implementation with DNNs since we can leverage automatic differentiation to compute the gradients efficiently. DNNs are also used in this way in Physics Informed Neural Networks <d-cite key="raissi_physics-informed_2019"></d-cite>, encouraging DNNs to satisy known physics, e.g., Navier–Stokes PDEs.
+
+Naturally, this doesn’t work out of the box. There are quite a few challenges -- some common to eigenvalue problems, and some unique to our setting. You can click on them to find out more about why they arise, and how we solve them.
+
+
+<details markdown="1">
+<summary>Trivial solutions</summary>
+ As with any eigenvalue problem, this loss admits the trivial solution $$\psi \equiv 0$$. To discourage such solutions, we introduce a shuffle-normalization loss where the two terms are sampled independently from the same distribution:
+
+$$
+\begin{equation}
+    \mathcal{L}_{\text{shuffle}} = \mathbb{E}_{\boldsymbol{x} \sim p(\boldsymbol{x}), \tilde{\boldsymbol{x}} \sim p(\boldsymbol{x})} \Bigg[ \nabla \psi(\boldsymbol{x}) \cdot f(\boldsymbol{x}) - \lambda \Big(\psi(\tilde{\boldsymbol{x}}) - \psi(\tilde{\boldsymbol{x}})^3\Big) \Bigg]^2,
+\end{equation}
+$$
+
+and optimize the ratio:
+
+$$
+\begin{equation}\mathcal{L}_{\text{ratio}} = \frac{\mathcal{L}_{\text{PDE}}}{\mathcal{L}_{\text{shuffle}}}. \label{eq:ratio loss}
+\end{equation}
+$$
+
+</details>
+
+
+<details  markdown="1"><summary>Degeneracy across basins</summary>
+Koopman eigenfunctions (KEFs) have an interesting property: a product of two KEFs is also a KEF. This can be seen from the PDE applied to two such functions
+
+
+$$
+\begin{equation}
+\nabla[\phi_1(x)\phi_2(x)] \cdot f(x) = (\lambda_1 + \lambda_2) \phi_1(x)\phi_2(x).
+\end{equation}
+$$
+
+
+We’ll soon see that this translates to squashed KEFs as well. First, consider a smooth KEF $$\phi^1$$ with $$\lambda = 1$$ that vanishes only on the separatrix (what we want). Now, consider a piecewise-constant function $$\phi^0$$ with $$\lambda = 0$$ that is equal to 1 on one basin, and zero on another basin. takes constant values within each basin and may be discontinuous at the separatrix. The product $$\phi^1 \phi^0$$ remains a valid KEF with $$\lambda = 1$$, but it can now be zero across entire basins—thereby destroying the separatrix structure we aim to capture. Because of the relation between KEFs and sKEFs, this problem carries over to our squashed case.
+To mitigate this problem, we add another regularizer that causes the average value of $$\psi$$ to be zero, encouraging negative and positive values on both sides of the separatrix.
+
+</details>
+
+
+<details markdown="1"><summary>Degeneracy in high dimensions</summary>
+If the flow itself is separable, there is a family of KEFs that can emphasize one dimension over the others. Consider a 2D system 
+$$\dot{x} = f_1(x), \quad \dot{y} = f_2(y)$$, and the KEFs $$A(x)$$ and $$B(y)$$. There is a family of valid solutions $$\psi(x, y) = A(x)^{\mu} B(y)^{1 - \mu}$$, for $$\mu \in R$$.
+
+
+If $$\mu=0$$ for instance, the $$x$$ dimension is ignored. To mitigate this, we choose distributions for training the DNN that emphasize different dimensions, and then combine the results.
+
+</details>
+
+
+## Does it work?
+
+Now that we know what we are looking for (PDE equation), and how to find it (DNN), let’s put it all together.
+We train a DNN on a nonlinear oscillator, and on a 2D GRU trained on a 1-bit flip-flop task. In both cases, the resulting $$\psi$$ has a zero level set on the separatrix.
+
+Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurons from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **F**). We then run many simulations via a binary-search along each curve (parameterized by $$\alpha\in[0,1]$$) to find the true separatrix crossing, and compare with $$\psi=0$$, finding close agreement (Fig. **G**).
 
 ## Tips and tricks
 

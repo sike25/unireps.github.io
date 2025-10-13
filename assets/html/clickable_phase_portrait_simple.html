@@ -45,7 +45,7 @@
       display: grid; place-items: start center; padding: 24px;
     }
 
-    .wrap { width: min(1100px, 96vw); }
+    .wrap { width: min(470px, 96vw); }
 
     header { margin-bottom: 16px; }
     h1 { font-size: 20px; font-weight: 650; margin: 0 0 8px 0; letter-spacing: 0.2px; }
@@ -183,7 +183,6 @@
 
     // Update title with system equations
     document.getElementById('systemDesc').innerHTML = 
-      `System: <strong>dx/dt = ${SYSTEM.equations.dx}</strong>, <strong>dy/dt = ${SYSTEM.equations.dy}</strong><br>` +
       'Click anywhere to trace the trajectory forward in time from that initial condition.';
 
     // ---------- Viewport / transforms ----------
@@ -269,7 +268,7 @@
       ctx.clearRect(0,0,rect.width,rect.height);
 
       drawGrid();
-      drawVectorField();
+      // drawVectorField();  // Disabled
       // drawNullclines();  // Removed
       drawAnnotations();
       drawTrajectories();
@@ -461,21 +460,21 @@
       ctx.stroke();
       ctx.setLineDash([]);
       
-      // Label separatrix with background
-      const midX = (xStart + xEnd) / 2;
-      const midY = -midX;
-      const [uLabel, vLabel] = worldToCanvas(midX, midY);
+      // Label separatrix with background (positioned at top-left)
       ctx.font = 'bold 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
       const sepLabel = 'separatrix';
       const metrics = ctx.measureText(sepLabel);
+      const labelPadding = 10;
+      const uLabel = labelPadding;
+      const vLabel = labelPadding;
       ctx.fillStyle = panelColor;
       ctx.globalAlpha = 0.9;
-      ctx.fillRect(uLabel - metrics.width/2 - 4, vLabel - 22, metrics.width + 8, 18);
+      ctx.fillRect(uLabel - 4, vLabel - 2, metrics.width + 8, 20);
       ctx.globalAlpha = 1.0;
       ctx.fillStyle = '#ff6600';
-      ctx.fillText(sepLabel, uLabel, vLabel - 8);
+      ctx.fillText(sepLabel, uLabel, vLabel);
       
       // 2. Stable fixed points at (-1, 0) and (1, 0)
       ctx.fillStyle = '#00ff88';
@@ -491,21 +490,30 @@
         ctx.fill();
         ctx.shadowBlur = 0;
         
-        // Label next to each point with background
-        const label = 'stable fixed point';
-        ctx.textAlign = x < 0 ? 'right' : 'left';
-        ctx.textBaseline = 'middle';
-        const offset = x < 0 ? -12 : 12;
-        const labelMetrics = ctx.measureText(label);
-        const labelX = u + offset;
-        const bgWidth = labelMetrics.width + 6;
-        const bgX = x < 0 ? labelX - bgWidth : labelX - 3;
+        // Label below each point with background (3 lines)
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const offset = 12;
+        const lineHeight = 14;
+        const labels = ['stable', 'fixed', 'point'];
+        
+        // Calculate background size
+        const maxWidth = Math.max(...labels.map(l => ctx.measureText(l).width));
+        const bgWidth = maxWidth + 6;
+        const bgHeight = lineHeight * 3 + 4;
+        const bgX = u - bgWidth / 2;
+        const bgY = v + offset;
+        
         ctx.fillStyle = panelColor;
         ctx.globalAlpha = 0.9;
-        ctx.fillRect(bgX, v - 8, bgWidth, 16);
+        ctx.fillRect(bgX, bgY - 2, bgWidth, bgHeight);
         ctx.globalAlpha = 1.0;
         ctx.fillStyle = '#00ff88';
-        ctx.fillText(label, labelX, v);
+        
+        // Draw each line
+        labels.forEach((label, i) => {
+          ctx.fillText(label, u, v + offset + i * lineHeight);
+        });
       }
       
       // 3. Unstable fixed point at (0, 0) - draw a cross
@@ -523,19 +531,32 @@
       ctx.stroke();
       ctx.shadowBlur = 0;
       
-      // Label unstable fixed point with background
-      const unstableLabel = 'unstable fixed point';
+      // Label unstable fixed point with background (positioned below, 3 lines)
       ctx.fillStyle = '#ff6600';
       ctx.font = "bold 13px 'Comic Neue', 'Comic Sans MS', cursive";
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      const unstableMetrics = ctx.measureText(unstableLabel);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const unstableOffset = 12;
+      const unstableLineHeight = 14;
+      const unstableLabels = ['unstable', 'fixed', 'point'];
+      
+      // Calculate background size
+      const unstableMaxWidth = Math.max(...unstableLabels.map(l => ctx.measureText(l).width));
+      const unstableBgWidth = unstableMaxWidth + 6;
+      const unstableBgHeight = unstableLineHeight * 3 + 4;
+      const unstableBgX = u0 - unstableBgWidth / 2;
+      const unstableBgY = v0 + unstableOffset;
+      
       ctx.fillStyle = panelColor;
       ctx.globalAlpha = 0.9;
-      ctx.fillRect(u0 + 12 - 3, v0 - 8, unstableMetrics.width + 6, 16);
+      ctx.fillRect(unstableBgX, unstableBgY - 2, unstableBgWidth, unstableBgHeight);
       ctx.globalAlpha = 1.0;
       ctx.fillStyle = '#ff6600';
-      ctx.fillText(unstableLabel, u0 + 12, v0);
+      
+      // Draw each line
+      unstableLabels.forEach((label, i) => {
+        ctx.fillText(label, u0, v0 + unstableOffset + i * unstableLineHeight);
+      });
       
       ctx.restore();
     }
