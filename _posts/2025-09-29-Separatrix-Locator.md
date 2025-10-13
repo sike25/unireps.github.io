@@ -27,19 +27,16 @@ bibliography: 2025-09-29-Separatrix-Locator.bib
 #   - we may want to automate TOC generation in the future using
 #     jekyll-toc plugin (https://github.com/toshimaru/jekyll-toc).
 toc:
-  - name: "Introduction: Fixed Points and beyond"
+  - name: "TL;DR"
+  - name: "Introduction: Fixed Points and Beyond"
     subsections:
-    - name: "Finding fixed points"
+    - name: "Finding Fixed Points"
     - name: "Setting"
   - name: "The Sandwich of Bistability"
   - name: "(squashed) Koopman Eigenfunctions"
   - name: "Enter Deep Neural Networks"
-  - name: "Does it work?"
-  - name: "Tips and tricks"
-    subsections:
-    - name: "Architecture"
-    - name: "Scaling x"
-    - name: "Ensuring |ψ|<1 at initialisation and that ⟨ψ⟩≈0"
+  - name: "Does It Work?"
+  - name: "Summary and Outlook"
 
 
 # Below is an example of injecting additional post-specific styles.
@@ -107,12 +104,12 @@ Seperatrices! These are boundaries between basins of attraction in dynamical sys
 
 
 
-## Introduction: Fixed Points and beyond
+## Introduction: Fixed Points and Beyond
 Many natural and artificial systems — from neural circuits making decisions to ecosystems switching between healthy and diseased states — are modeled as **multistable dynamical systems**. Their behavior is governed by multiple **attractors** in state space, each corresponding to a stable mode of activity. Understanding these systems often boils down to understanding their **geometry**: where are the stable states, and how are the different basins of attraction separated?
 
 For the last decade, a workhorse of neural circuit analysis has been **fixed point analysis**. By finding points where the flow vanishes and linearizing around them, one can uncover local motifs underlying computation: line attractors, saddle points, limit cycles, and so on. This has yielded powerful insights into how trained RNNs implement cognitive tasks.
 
-### Finding fixed points
+### Finding Fixed Points
 First consider a bistable dynamical system in 2 dimensions. Below is a phase-portrait of such a system, with two stable fixed points and one unstable fixed point. Click on plot to realise trajectories of the dynamics.
 
 <div class="l-body" style="text-align: center; margin: 2rem 0;">
@@ -523,7 +520,7 @@ If $$\mu=0$$ for instance, the $$x$$ dimension is ignored. To mitigate this, we 
 </details>
 
 
-## Does it work?
+## Does It Work?
 
 Now that we know what we are looking for (PDE equation), and how to find it (DNN), let’s put it all together.
 We train a DNN on a bistable damped oscillator, and on a 2D GRU trained on a 1-bit flip-flop task. In both cases, the resulting $$\psi$$ has a zero level set on the separatrix.
@@ -531,19 +528,26 @@ We train a DNN on a bistable damped oscillator, and on a 2D GRU trained on a 1-b
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-09-29-Separatrix-Locator/two_2D_examples_squashed.png" alt="Two 2D Examples" width="100%" />
   <div style="max-width: 500px; margin: 0.5rem auto; text-align: center;">
-    <em><strong>A</strong>: ODEs for the damped duffing oscillator. <strong>B</strong>: Kinetic energy function identifies stable and unstable fixed points. <strong>C</strong>: DNN approximation of the sKEF and it's level sets. The zero-level set (orange) aligns with the separatrix. <strong>D,E,F</strong> Same for a 2D GRU RNN trained on a 1-bit flip flop task. </em>
+    <em><strong>A</strong>: ODEs for the damped duffing oscillator. <strong>B</strong>: Kinetic energy function identifies stable and unstable fixed points. <strong>C</strong>: DNN approximation of the sKEF and it's level sets. The zero-level set (orange) aligns with the separatrix. <strong>D,E,F</strong>: Same for a 2D GRU RNN trained on a 1-bit flip flop task. </em>
   </div>
 </div>
 
 
-Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurons from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **F**). We then run many simulations via a binary-search along each curve (parameterized by $$\alpha\in[0,1]$$) to find the true separatrix crossing, and compare with $$\psi=0$$, finding close agreement (Fig. **G**).
+<!-- Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurons from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **A**). We then run many simulations via a binary-search along each curve (parameterized by $$\alpha\in[0,1]$$) to find the true separatrix crossing, and compare with $$\psi=0$$, finding close agreement (Fig. **B**). -->
+
+Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurons from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **A**). We then run many simulations via a binary-search along each curve (parameterized by $\alpha\in[0,1]$) to find the true separatrix crossing, and compare with $\psi=0$, finding close agreement (Fig. **B**). This also allows us to design optimal perturbations. If we want to change the network's decision, pushing the system towards the desired attractor may not be the most efficient direction. Using $\psi$, we design minimal perturbations that cross the separatrix. The resulting perturbation size is smaller than perturbations aimed at the target fixed point or random separatrix locations (Fig. **C**).
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-09-29-Separatrix-Locator/finkelstein_blog.png" alt="Two 2D Examples" width="100%" />
   <div style="max-width: 500px; margin: 0.5rem auto; text-align: center;">
-    <em><strong>A</strong>: Hermite curves connecting attractors of a data-trained RNN <d-cite key="finkelstein_attractor_2021"></d-cite> with true separatrix points (red). <strong>B</strong> sKEF zeroes versus true separatrix points along each curve (2D projection from 668D). <strong>C</strong> Norm of perturbations to reach separatrix from base point $\boldsymbol{x}_\text{base}$. </em>
+    <em><strong>A</strong>: Hermite curves connecting attractors of a data-trained RNN <d-cite key="finkelstein_attractor_2021"></d-cite> with true separatrix points (red). <strong>B</strong>: sKEF zeroes versus true separatrix points along each curve (2D projection from 668D). <strong>C</strong>: Norm of perturbations to reach separatrix from base point $\boldsymbol{x}_\text{base}$. </em>
   </div>
 </div>
+
+## Summary and Outlook
+
+Making sense of high-dimensional dynamical systems is not trivial. We added another tool to the toolbox - a separatrix finder. More generally, one can think of our cubic $$\eqref{eq:sKEFsimple}$$ as a [normal form](https://en.wikipedia.org/wiki/Normal_form_(dynamical_systems)) for bistability. This is a canonical, or simple, version of a dynamical system with the same *topology*. Our method allows to reduce the high-D dynamics into such a form. In the future, we hope to extend this to many more applications. Check out [our code](https://github.com/KabirDabholkar/separatrix_locator) and apply it to your own dynamical systems. Feel free to reach out to us, we're excited to help and learn about new applications!
+
 
 <!-- 
 ## Tips and tricks
