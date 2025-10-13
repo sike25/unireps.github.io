@@ -113,7 +113,7 @@ For the last decade, a workhorse of neural circuit analysis has been **fixed poi
 First consider a bistable dynamical system in 2 dimensions. Below is a phase-portrait of such a system, with two stable fixed points and one unstable fixed point. Click on plot to realise trajectories of the dynamics.
 
 <div class="l-body" style="text-align: center; margin: 2rem 0;">
-  <iframe src="/blog/assets/html/clickable_phase_portrait_simple.html" 
+  <iframe src="/blog/assets/html/2025-09-29-Separatrix-Locator/clickable_phase_portrait_simple.html" 
           scrolling="no"
           style="width: 80%; height: 400px; border: none; border-radius: 8px; overflow: hidden;">
   </iframe>
@@ -126,7 +126,7 @@ Now try to click somewhere that will lead you exactly to the saddle point. Did y
 This motivates developing a principled way to find such points. One solution is to define a specific scalar function of the dynamics whose only minima are given by all the fixed points. One such function is the kinetic energy $$q(\boldsymbol x)=\frac{1}{2}\Vert f(\boldsymbol x)\Vert^2$$ <d-cite key="sussillo_opening_2013,golub_fixedpointfinder_2018"></d-cite>. By differentiating this function, one can perform gradient descent to find these minima. The interactive plot below realises such trajectories.
 
 <div class="l-body" style="text-align: center; margin: 2rem 0;">
-  <iframe src="/blog/assets/html/gradient_descent_phase_portrait.html" 
+  <iframe src="/blog/assets/html/2025-09-29-Separatrix-Locator/gradient_descent_phase_portrait.html" 
           scrolling="no"
           style="width: 80%; height: 400px; border: none; border-radius: 8px; overflow: hidden;">
   </iframe>
@@ -143,7 +143,7 @@ When a system receives a perturbation — for example, a sensory input or an opt
 Below is an example of such a function that we constructed for this simple system (click on it to run trajectories). 
 
 <div class="l-body" style="text-align: center; margin: 2rem 0;">
-  <iframe src="/blog/assets/html/absolute_value_gradient_descent.html" 
+  <iframe src="/blog/assets/html/2025-09-29-Separatrix-Locator/absolute_value_gradient_descent.html" 
           scrolling="no"
           style="width: 80%; height: 400px; border: none; border-radius: 8px; overflow: hidden;">
   </iframe>
@@ -205,7 +205,7 @@ $$
 $$
 
 <div class="plot-tooltip">
-  <iframe src="/blog/assets/html/bistable_1d_plot.html" scrolling="no"></iframe>
+  <iframe src="/blog/assets/html/2025-09-29-Separatrix-Locator/bistable_1d_plot.html" scrolling="no"></iframe>
 </div>
 
 </div>
