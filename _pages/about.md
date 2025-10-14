@@ -15,7 +15,7 @@ pagination:
     before: 1 # The number of links before the current page
     after: 3 # The number of links after the current page
 ---
-🚨 **Submission deadline extended to _25 October 2025 (AoE)_**
+🚨 <strong> Submission deadline extended to 25 October 2025 (AoE) </strong>
 
 <div class="about-section">
 {% assign blog_name_size = site.blog_name | size %}
