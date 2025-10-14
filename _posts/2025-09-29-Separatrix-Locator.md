@@ -498,7 +498,7 @@ Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activit
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-09-29-Separatrix-Locator/finkelstein_blog.png" alt="Two 2D Examples" width="100%" />
   <div style="max-width: 500px; margin: 0.5rem auto; text-align: center;">
-    <em><strong>A</strong>: Hermite curves connecting attractors of a data-trained RNN <d-cite key="finkelstein_attractor_2021"></d-cite> with true separatrix points (red). <strong>B</strong>: sKEF zeroes versus true separatrix points along each curve (2D projection from 668D). <strong>C</strong>: Norm of perturbations to reach separatrix from base point $\boldsymbol{x}_\text{base}$. </em>
+    <em><strong>A</strong>: Hermite curves connecting attractors of a data-trained RNN <d-cite key="finkelstein_attractor_2021"></d-cite> (2D projection from 668D) with true separatrix points (red). <strong>B</strong>: sKEF zeroes versus true separatrix points along each curve. <strong>C</strong>: Norm of perturbations to reach separatrix from base point $\boldsymbol{x}_\text{base}$. </em>
   </div>
 </div>
 
