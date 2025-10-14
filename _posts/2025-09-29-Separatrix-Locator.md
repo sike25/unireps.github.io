@@ -93,21 +93,15 @@ _styles: >
 ---
 
 ## TL;DR
-Seperatrices! These are boundaries between basins of attraction in dynamical systems. In high-dimensional systems like Recurrent neural networks, finding these boundaries can help reverse engineer their mechanism, or design optimal perturbations. But finding them is far from trivial. We recently developed a numerical method, based on approximating a Koopman Eigenfunction (KEF) of the dynamics using a deep neural network (DNN) <d-cite key="dabholkar_finding_2025"></d-cite>. While this approach works, these KEFs suffer from singularities at attractors, which makes them difficult targets for DNNs to approximate. In this blogpost we explain our original method, and also improve it by using a variant we call *squashed Koopman Eigenfunctions* (sKEFs), which alleviate the singularities. We show how they are linked to KEFs and replicate our results from the paper.
+Separatrices! These are boundaries between basins of attraction in dynamical systems. In high-dimensional systems like Recurrent Neural Networks, finding these boundaries can help reverse engineer their mechanism, or design optimal perturbations. But finding them is far from trivial. We recently developed a numerical method, based on approximating a Koopman Eigenfunction (KEF) of the dynamics using a deep neural network (DNN) <d-cite key="dabholkar_finding_2025"></d-cite>. While this approach works, these KEFs suffer from singularities at attractors, which makes them difficult targets for DNNs to approximate. In this blogpost we explain our original method, and also improve it by using a variant we call *squashed Koopman Eigenfunctions* (sKEFs), which alleviate the singularities. We show how they are linked to KEFs and replicate our results from the paper.
 
 **Code**: We provide a Python package implementing this method at [github.com/KabirDabholkar/separatrix_locator](https://github.com/KabirDabholkar/separatrix_locator).
 
 
-
-<!-- We recently developed a numerical method to finding separatrices -- the boundaries between basins of attraction -- in high-dimensional dynamical systems like Recurrent Neural Networks <d-cite key="dabholkar_finding_2025"></d-cite>. This approach involves approximating a Koopman Eigenfunction (KEF) of the dynamics using a deep neural networks (DNNs). While this approach works, these KEFs suffer from singularities at attractors, which makes them difficult targets for DNNs to approximate. In this blogpost we improve on our method using a variant we call *squashed Koopman Eigenfunctions* (sKEFs), which alleviate the singularities. We show how they are linked to KEFs and replicate our results from the paper. -->
-
-
-
-
 ## Introduction: Fixed Points and Beyond
-Many natural and artificial systems — from neural circuits making decisions to ecosystems switching between healthy and diseased states — are modeled as **multistable dynamical systems**. Their behavior is governed by multiple **attractors** in state space, each corresponding to a stable mode of activity. Understanding these systems often boils down to understanding their **geometry**: where are the stable states, and how are the different basins of attraction separated?
+Many natural and artificial systems — from neural circuits making decisions to ecosystems switching between healthy and diseased states — are modelled as **multistable dynamical systems**. Their behaviour is governed by multiple **attractors** in state space, each corresponding to a stable mode of activity. Understanding these systems often boils down to understanding their **geometry**: where are the stable states, and how are the different basins of attraction separated?
 
-For the last decade, a workhorse of neural circuit analysis has been **fixed point analysis**. By finding points where the flow vanishes and linearizing around them, one can uncover local motifs underlying computation: line attractors, saddle points, limit cycles, and so on. This has yielded powerful insights into how trained RNNs implement cognitive tasks.
+For the last decade, a workhorse of neural circuit analysis has been **fixed point analysis**. By finding points where the flow vanishes and linearising around them, one can uncover local motifs underlying computation: line attractors, saddle points, limit cycles, and so on. This has yielded powerful insights into how trained RNNs implement cognitive tasks.
 
 ### Finding Fixed Points
 First consider a bistable dynamical system in 2 dimensions. Below is a phase-portrait of such a system, with two stable fixed points and one unstable fixed point. Click on plot to realise trajectories of the dynamics.
@@ -119,7 +113,7 @@ First consider a bistable dynamical system in 2 dimensions. Below is a phase-por
   </iframe>
 </div>
 
-Trajectories converge to either one of the two fixed points. This naturally provides an algorithm to find the stable fixed points: just run the dynamics from many initial conditions.
+Trajectories converge to either one of the two fixed points. This naturally suggests an algorithm: run the dynamics from many initial conditions to find the stable fixed points.
 
 Now try to click somewhere that will lead you exactly to the saddle point. Did you succeed? It's almost impossible.
 
@@ -132,7 +126,7 @@ This motivates developing a principled way to find such points. One solution is 
   </iframe>
 </div>
 
-Now we can find both stable *and unstable* fixed points. Linearising around the fixed points provides an interpretable approximation of the dynamics in the neighborhood of those points. Several works adopt this approach of fixed point finding to reverse-engineer either task-trained or data-trained RNNs <d-cite key="carnevale_dynamic_2015,maheswaranathan_reverse_2019,maheswaranathan_universality_2019,finkelstein_attractor_2021,mante_context-dependent_2013,liu_encoding_2024,driscoll_flexible_2024,chaisangmongkon_computing_2017,jaffe_modelling_2023,pagan_individual_2025,wang_flexible_2018"></d-cite>.
+Now we can find both stable *and unstable* fixed points. Linearising around the fixed points provides an interpretable approximation of the dynamics in the neighbourhood of those points. Several works adopt this approach of fixed point finding to reverse-engineer either task-trained or data-trained RNNs <d-cite key="carnevale_dynamic_2015,maheswaranathan_reverse_2019,maheswaranathan_universality_2019,finkelstein_attractor_2021,mante_context-dependent_2013,liu_encoding_2024,driscoll_flexible_2024,chaisangmongkon_computing_2017,jaffe_modelling_2023,pagan_individual_2025,wang_flexible_2018"></d-cite>.
 
 But fixed points are only half the story.
 
@@ -151,18 +145,6 @@ Below is an example of such a function that we constructed for this simple syste
 
 Our main contribution is a numerical method to approximate such functions using deep neural networks in order to find separatrices in multistable dynamical systems in high-dimensions.
 
-<!-- > This is the central idea behind **(squashed) Koopman eigenfunctions**. -->
-
-
-<!-- Motivation: many dynamical systems have multiple attractors. decisions, memories, ecological states.
-
-Fixed point analysis is powerful but local.
-
-Separatrices (basin boundaries) are critical for predicting effects of perturbations (e.g., optogenetics).
-
-Teaser figure: 2D bistable system with flow, fixed points, kinetic energy vs separatrix vs squashed KEF zero contour.
-
-“What if we could learn a single scalar function whose zero level set is the separatrix?” -->
 
 ### Setting
 We consider autonomous dynamical flows of the form:
@@ -176,12 +158,12 @@ governing the state  $$\boldsymbol{x} \in \mathbb R^N$$,
 where $$\dot \square$$ is shorthand for the time derivative $$\frac{d}{dt}\square$$ and $$f: \mathbb R^N \to \mathbb R^N$$ defines the dynamical flow.
 
 > **The Goal:**  
-> Find a smooth scalar function $$\psi:\mathbb{R}^N\to\mathbb{R}$$ that grows as we move away from the separatix, i.e., $$\psi(\boldsymbol x)=0$$ for $$x\in\text{separatix}$$ and grows as it moves away from the separatrix.
+> Find a smooth scalar function $$\psi:\mathbb{R}^N\to\mathbb{R}$$ that grows as we move away from the separatix, i.e., $$\psi(\boldsymbol x)=0$$ for $$x\in\text{separatrix}$$ and grows as it moves away from the separatrix.
 {: .goal-box #goal}
 
 
 ## The Sandwich of Bistability
-Any bistable system can decomposed as follows: it will have two attractors, their respective basins of attraction and the separatrix between them. This is like a cheese sandwich: the attractors are slices of bread, and the separatrix is the slice of cheese between them. We can call this the **Sandwich of Bistability**. In general, this sandwich could be arbitrarily oriented in $$\mathbb R^N$$ and even nonlinearly warped. 
+Any bistable system can be decomposed as follows: it will have two attractors, their respective basins of attraction and the separatrix between them. This is like a cheese sandwich: the attractors are slices of bread, and the separatrix is the slice of cheese between them. We can call this the **Sandwich of Bistability**. In general, this sandwich could be arbitrarily oriented in $$\mathbb R^N$$ and even nonlinearly warped. 
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-09-29-Separatrix-Locator/sandwich_of_bistability.png" alt="Sandwich of Bistability" width="500" />
@@ -191,7 +173,7 @@ Any bistable system can decomposed as follows: it will have two attractors, thei
 </div>
 
 
-With our scalar function $$\psi:\mathbb{R}^N\to\mathbb{R}$$ we would like to perform a special type of dimensionality reduction: we only care to identify our location along the attractor -- separatrix -- attractor axis, i.e., along the depth of sandwich. 
+With our scalar function $$\psi:\mathbb{R}^N\to\mathbb{R}$$ we would like to perform a special type of dimensionality reduction: we only care to identify our location along the attractor--separatrix--attractor axis, i.e., along the depth of sandwich. 
 
 One way to achieve this is to have this scalar observable $$\psi(\boldsymbol x)$$ *imitate* the bistable dynamics along this axis. Thus we pick a simple example of bistable dynamics in 1D (hover your cursor over it to see the plot):
 
@@ -425,27 +407,6 @@ $$
 Note that this derivation is highly non-rigorous. We gloss over the square integrability of $$\psi$$ and $$\phi$$, and even whether they are defined everywhere in $$\mathbb R^N$$. According to our sandwich of bistability, we expect $$\psi(\boldsymbol {x^*})=\pm1$$ at the attractors. According to $$\eqref{eq:unsquash}$$, $$\phi(\boldsymbol {x^*})=\pm\infty$$,
 
 
-<!-- By the chain rule, the left hand side of equation $$\eqref{eq:sKEF}$$ is: -->
-
-<!-- $$\begin{equation}
-\frac{d}{dt}\bigg(\psi\big(\boldsymbol{x}(t)\big)\bigg) = \nabla_{\boldsymbol{x}}\psi\big(\boldsymbol{x}(t)\big) \cdot \dot{\boldsymbol{x}}(t)
-\label{eq:chainrule}
-\end{equation}$$  -->
-
-<!-- Substituting $$\eqref{eq:ODE}$$ and equating with the right hand side of $$\eqref{eq:sKEF}$$:
-
-$$\begin{equation}
-\nabla_{\boldsymbol{x}}\psi(\boldsymbol{x}) \cdot f(\boldsymbol{x}) = \lambda[\psi(\boldsymbol{x}) - \psi(\boldsymbol{x})^3]
-\label{eq:sKEFPDE}
-\end{equation}$$ -->
-
-<!-- This is a first order nonlinear partial differential equation (PDE) for $$\psi(\boldsymbol{x})$$. It seems that finding solutions to  -->
-
-<!-- If we can find a function $$\psi$$ that satisfies this PDE, then its zero level set will be the separatrix we seek, right? Not quite, unfortunately $$\eqref{eq:sKEFPDE}$$ also admits several unhelpful solutions. We address these in [Degeneracies and how to fight them](#degeneracies-and-how-to-fight-them). Solutions to  -->
-
-<!-- But the first challenge is to solve this PDE for high-dimensional nonlinear system. This is where deep neural networks come in... -->
-
-
 ## Enter Deep Neural Networks 
 
 
@@ -468,7 +429,7 @@ $$ \begin{equation}
 \end{equation}
 $$
 
-where $$p(\boldsymbol{x})$$ is a distribution over the phase space <d-cite key="e_deep_2018,sirignano_dgm_2018"></d-cite>. We can now parameterise $$\psi$$ using a DNN, and train it's weights to optimise $$\eqref{eq:pde_loss}$$. This gradient-based PDE formulation is particularly convenient for implementation with DNNs since we can leverage automatic differentiation to compute the gradients efficiently. DNNs are also used in this way in Physics Informed Neural Networks <d-cite key="raissi_physics-informed_2019"></d-cite>, encouraging DNNs to satisy known physics, e.g., Navier–Stokes PDEs.
+where $$p(\boldsymbol{x})$$ is a distribution over the phase space <d-cite key="e_deep_2018,sirignano_dgm_2018"></d-cite>. We can now parameterise $$\psi$$ using a DNN, and train its weights to optimise $$\eqref{eq:pde_loss}$$. This gradient-based PDE formulation is particularly convenient for implementation with DNNs since we can leverage automatic differentiation to compute the gradients efficiently. DNNs are also used in this way in physics-informed neural networks <d-cite key="raissi_physics-informed_2019"></d-cite>, encouraging DNNs to satisfy known physics, e.g., Navier–Stokes PDEs.
 
 Naturally, this doesn’t work out of the box. There are quite a few challenges -- some common to eigenvalue problems, and some unique to our setting. You can click on them to find out more about why they arise, and how we solve them.
 
@@ -483,7 +444,7 @@ $$
 \end{equation}
 $$
 
-and optimize the ratio:
+and optimise the ratio:
 
 $$
 \begin{equation}\mathcal{L}_{\text{ratio}} = \frac{\mathcal{L}_{\text{PDE}}}{\mathcal{L}_{\text{shuffle}}}. \label{eq:ratio loss}
@@ -494,7 +455,7 @@ $$
 
 
 <details  markdown="1"><summary>Degeneracy across basins</summary>
-Koopman eigenfunctions (KEFs) have an interesting property: a product of two KEFs is also a KEF. This can be seen from the PDE applied to two such functions
+Koopman eigenfunctions (KEFs) have an interesting property: a product of two KEFs is also a KEF. This can be seen by applying the PDE to the product of two such functions
 
 
 $$
@@ -505,17 +466,17 @@ $$
 
 
 We’ll soon see that this translates to squashed KEFs as well. First, consider a smooth KEF $$\phi^1$$ with $$\lambda = 1$$ that vanishes only on the separatrix (what we want). Now, consider a piecewise-constant function $$\phi^0$$ with $$\lambda = 0$$ that is equal to 1 on one basin, and zero on another basin. The product $$\phi^1 \phi^0$$ remains a valid KEF with $$\lambda = 1$$, but it can now be zero across entire basins—thereby destroying the separatrix structure we aim to capture. Because of the relation between KEFs and sKEFs, this problem carries over to our squashed case.
-To mitigate this problem, we add another regularizer that causes the average value of $$\psi$$ to be zero, encouraging negative and positive values on both sides of the separatrix.
+To mitigate this problem, we add another regulariser that causes the average value of $$\psi$$ to be zero, encouraging negative and positive values on both sides of the separatrix.
 
 </details>
 
 
 <details markdown="1"><summary>Degeneracy in high dimensions</summary>
-If the flow itself is separable, there is a family of KEFs that can emphasize one dimension over the others. Consider a 2D system 
+If the flow itself is separable, there is a family of KEFs that can emphasise one dimension over the others. Consider a 2D system 
 $$\dot{x} = f_1(x), \quad \dot{y} = f_2(y)$$, and the KEFs $$A(x)$$ and $$B(y)$$. There is a family of valid solutions $$\psi(x, y) = A(x)^{\mu} B(y)^{1 - \mu}$$, for $$\mu \in R$$.
 
 
-If $$\mu=0$$ for instance, the $$x$$ dimension is ignored. To mitigate this, we choose distributions for training the DNN that emphasize different dimensions, and then combine the results.
+If $$\mu=0$$ for instance, the $$x$$ dimension is ignored. To mitigate this, we choose distributions for training the DNN that emphasise different dimensions, and then combine the results.
 
 </details>
 
@@ -532,10 +493,7 @@ We train a DNN on a bistable damped oscillator, and on a 2D GRU trained on a 1-b
   </div>
 </div>
 
-
-<!-- Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurons from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **A**). We then run many simulations via a binary-search along each curve (parameterized by $$\alpha\in[0,1]$$) to find the true separatrix crossing, and compare with $$\psi=0$$, finding close agreement (Fig. **B**). -->
-
-Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurons from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **A**). We then run many simulations via a binary-search along each curve (parameterized by $$\alpha\in[0,1]$$) to find the true separatrix crossing, and compare with $$\psi=0$$, finding close agreement (Fig. **B**). This also allows us to design optimal perturbations. If we want to change the network's decision, pushing the system towards the desired attractor may not be the most efficient direction. Using $$\psi$$, we design minimal perturbations that cross the separatrix. The resulting perturbation size is smaller than perturbations aimed at the target fixed point or random separatrix locations (Fig. **C**).
+Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activity of neurones from anterior lateral motor cortex of mice trained to respond to optogenetic stimulation of their somatosensory cortex <d-cite key="finkelstein_attractor_2021"></d-cite>. By simulating the RNN we can locate the two attractors. The separatrix is an $$(N-1)$$-dimensional manifold in $$\mathbb{R}^N$$. To evaluate our method, we sample this high-D space by drawing random cubic Hermite curves that connect the two attractors (Fig. **A**). We then run many simulations via a binary-search along each curve (parameterised by $$\alpha\in[0,1]$$) to find the true separatrix crossing, and compare with $$\psi=0$$, finding close agreement (Fig. **B**). This also allows us to design optimal perturbations. If we want to change the network's decision, pushing the system towards the desired attractor may not be the most efficient direction. Using $$\psi$$, we design minimal perturbations that cross the separatrix. The resulting perturbation size is smaller than perturbations aimed at the target fixed point or random separatrix locations (Fig. **C**).
 
 <div style="text-align: center;">
   <img src="/blog/assets/img/2025-09-29-Separatrix-Locator/finkelstein_blog.png" alt="Two 2D Examples" width="100%" />
@@ -546,7 +504,7 @@ Finally, we take a published $$N=668$$ unit RNN trained to reproduce the activit
 
 ## Summary and Outlook
 
-Making sense of high-dimensional dynamical systems is not trivial. We added another tool to the toolbox - a separatrix finder. More generally, one can think of our cubic $$\eqref{eq:sKEFsimple}$$ as a [normal form](https://en.wikipedia.org/wiki/Normal_form_(dynamical_systems)) for bistability. This is a canonical, or simple, version of a dynamical system with the same *topology*. Our method allows to reduce the high-D dynamics into such a form. In the future, we hope to extend this to many more applications. Check out [our code](https://github.com/KabirDabholkar/separatrix_locator) and apply it to your own dynamical systems. Feel free to reach out to us, we're excited to help and learn about new applications!
+Making sense of high-dimensional dynamical systems is not trivial. We added another tool to the toolbox -- a separatrix finder. More generally, one can think of our cubic $$\eqref{eq:sKEFsimple}$$ as a [normal form](https://en.wikipedia.org/wiki/Normal_form_(dynamical_systems)) for bistability. This is a canonical, or simple, version of a dynamical system with the same *topology*. Our method allows to reduce the high-D dynamics into such a form. In the future, we hope to extend this to many more applications. Check out [our code](https://github.com/KabirDabholkar/separatrix_locator) and apply it to your own dynamical systems. Feel free to reach out to us, we're excited to help and learn about new applications!
 
 
 <!-- 
