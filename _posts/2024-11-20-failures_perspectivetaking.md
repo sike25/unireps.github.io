@@ -6,6 +6,7 @@ tags: distill formatting
 giscus_comments: true
 date: 2024-11-20
 featured: true
+pretty_tables: true
 
 authors:
   - name: Bridget Leonard
@@ -45,12 +46,14 @@ toc:
   - name: Conclusion
 ---
 
-Listen to the AI-generated podcast based on our preprint or check out the benchmark paper and project on GitHub:
-
-<audio controls preload="auto">
-  <source src="assets/audio/2024-11-20-failures_perspectivetaking/podcast.mp3" type="audio/mpeg">
-  Your browser does not support the audio element.
-</audio>
+<div class="caption">
+    Listen to the AI-generated podcast based on our preprint or check out the benchmark paper and project on GitHub:
+</div>
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+        {% include audio.liquid path="assets/audio/2024-11-20-failures_perspectivetaking/podcast.mp3" controls=true %}
+    </div>
+</div>
 
 <div style="display: flex; align-items: center;">
   <a href="https://github.com/bridgetleonard2/perspectiveTaking" style="margin-left: 70px; margin-right: 80px; display: inline-block;">
