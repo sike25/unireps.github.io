@@ -57,13 +57,13 @@ toc:
 
 <div style="display: flex; align-items: center;">
   <a href="https://github.com/bridgetleonard2/perspectiveTaking" style="margin-left: 70px; margin-right: 80px; display: inline-block;">
-    <img src="assets/img/2024-11-20-failures_perspectivetaking/github-mark.png" alt="GitHub" class="logo" width="40" />
+    <img src="{{ '/assets/img/2024-11-20-failures_perspectivetaking/github-mark.png' | relative_url }}" alt="GitHub" class="logo" width="40" />
   </a>
   <a href="https://arxiv.org/abs/2409.13929" style="display: inline-block;">
-    <img src="assets/img/2024-11-20-failures_perspectivetaking/arxiv-logomark-small@2x.png" alt="arXiv" class="logo" width="30"/>
+    <img src="{{ '/assets/img/2024-11-20-failures_perspectivetaking/arxiv-logomark-small@2x.png' | relative_url }}" alt="arXiv" class="logo" width="30"/>
   </a>
-</div
->
+</div>
+
 ## Introduction
 
 Recent research in AI has exposed a critical limitation: the inability of current models to effectively perform spatial reasoning tasks. Despite their impressive visual perception capabilities, these models struggle to understand spatial relationships and make inferences about them. While previous research has explored aspects of spatial cognition in AI, it often lacks the specificity characteristic of human spatial cognition studies. In cognitive psychology, tasks are carefully designed to isolate distinct processes, enabling precise measurement and minimizing bias or reliance on alternative strategies. To bridge the gap between cognitive science and artificial intelligence, we focus on a fundamental aspect of human spatial reasoning: visual perspective-taking.
