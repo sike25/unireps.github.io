@@ -122,12 +122,60 @@ Our experimental design was inspired by previous studies that evaluated viewpoin
 
 Ten iterations of each image were passed through the model to calculate the percentage of correct responses.
 
-| Task                      | Example Stimulus                                                                           | Prompt                                                                                                                                         |
-| ------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Level 1                   | <img src="assets/img/2024-11-20-failures_perspectivetaking/infront_behind_ex.jpg" alt='Level 1: "IN FRONT" 45°' width="300"/>   | For the following images respond with in front or behind to indicate if the cube is in front or behind from the perspective of the person.     |
-| Level 2: Spatial Judgment | <img src="assets/img/2024-11-20-failures_perspectivetaking/left_right_ex.jpg" alt='Level 2 Spatial: "RIGHT" 225°' width="300"/> | For the following images respond with left or right to indicate if the cube is to the left or to the right from the perspective of the person. |
-| Level 2: Visual Judgment  | <img src="assets/img/2024-11-20-failures_perspectivetaking/number_ex.jpg" alt='Level 2 Visual: "6" 90°' width="300"/>           | For the following images respond with 6 or 9 to indicate if the number on the cube is a 6 or a 9 from the perspective of the person.           |
-| Level 2: Visual Judgment  | <img src="assets/img/2024-11-20-failures_perspectivetaking/letter_ex.jpg" alt='Level 2 Visual: "W" 315°' width="300"/>          | For the following images respond with M or W to indicate if the letter on the cube is an M or a W from the perspective of the person.          |
+<div class="table-responsive">
+  <table class="table table-striped table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th scope="col">Task</th>
+        <th scope="col">Example Stimulus</th>
+        <th scope="col">Prompt</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Level 1</strong></td>
+        <td>
+          <img src="{{ '/assets/img/2024-11-20-failures_perspectivetaking/infront_behind_ex.jpg' | relative_url }}"
+               alt='Level 1: "IN FRONT" 45°'
+               class="img-fluid rounded shadow-sm"
+               style="max-width: 300px;">
+        </td>
+        <td>For the following images respond with <em>in front</em> or <em>behind</em> to indicate if the cube is in front or behind from the perspective of the person.</td>
+      </tr>
+      <tr>
+        <td><strong>Level 2: Spatial Judgment</strong></td>
+        <td>
+          <img src="{{ '/assets/img/2024-11-20-failures_perspectivetaking/left_right_ex.jpg' | relative_url }}"
+               alt='Level 2 Spatial: "RIGHT" 225°'
+               class="img-fluid rounded shadow-sm"
+               style="max-width: 300px;">
+        </td>
+        <td>For the following images respond with <em>left</em> or <em>right</em> to indicate if the cube is to the left or to the right from the perspective of the person.</td>
+      </tr>
+      <tr>
+        <td><strong>Level 2: Visual Judgment</strong></td>
+        <td>
+          <img src="{{ '/assets/img/2024-11-20-failures_perspectivetaking/number_ex.jpg' | relative_url }}"
+               alt='Level 2 Visual: "6" 90°'
+               class="img-fluid rounded shadow-sm"
+               style="max-width: 300px;">
+        </td>
+        <td>For the following images respond with <em>6</em> or <em>9</em> to indicate if the number on the cube is a 6 or a 9 from the perspective of the person.</td>
+      </tr>
+      <tr>
+        <td><strong>Level 2: Visual Judgment</strong></td>
+        <td>
+          <img src="{{ '/assets/img/2024-11-20-failures_perspectivetaking/letter_ex.jpg' | relative_url }}"
+               alt='Level 2 Visual: "W" 315°'
+               class="img-fluid rounded shadow-sm"
+               style="max-width: 300px;">
+        </td>
+        <td>For the following images respond with <em>M</em> or <em>W</em> to indicate if the letter on the cube is an M or a W from the perspective of the person.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
 
 ### Chain of Thought Prompting
 
