@@ -37,7 +37,7 @@ toc:
 **TLDR**
 
 Deploying AI models on heterogeneous RISC-V systems requires not only partitioning computation between CPU and accelerator, but also identifying which operations to accelerate when hardware capabilities evolve. We present `mlir-arx`, a profile-guided compiler built on MLIR that introduces an `arx` dialect to encode accelerator constraints, inserts lightweight profiling operations via dedicated passes, and applies a two-stage (analytic + profile-guided) cost model to form maximal offload regions under resource and dependency limits. Early evaluation on a small MNIST CNN with a configurable VTA accelerator on a Genesis FPGA prototype demonstrates that the compile--measure loop identifies profitable regions and achieves significant end-to-end speedups over the CPU-only baseline.
-
+ 
 Availability. Source code and artifacts are available at: [Repository in Our Gitlab](https://gitlab.com/ones-ai/mlir-arx)
 
 ---
