@@ -50,44 +50,93 @@ toc:
 
 ## Introduction
 
-Traditional deep learning models are often built around the use of a single input type or modality such as RGB pixel values for images <d-cite key="resnet2015"></d-cite>, or tokenized text for language generation <d-cite key="Radford2018ImprovingLU"></d-cite>. However, recent advances in machine learning have begun to take advantage of the use of multiple modalities <d-cite key="jiao-multi-modal-survey"></d-cite>. This may take on the form of merging modalities for model use: e.g., merging many sensors for an autonomous vehicle <d-cite key="panduru2025exploring"></d-cite>, converting one modality to another (such as image-to-text, text-to-speech, etc.), or providing multiple modalities such as image and language prompting for both large language models <d-cite key="openai2024gpt4technicalreport"></d-cite> and image generation tasks <d-cite key="rombach2022highresolutionimagesynthesislatent"></d-cite>. Multi-modal models have many diverse uses, and their development is an actively researched field.
+Deep learning systems were once tailored to a single input type, for instance RGB pixels in image models <d-cite key="resnet2015"></d-cite> or tokenized text for language generation <d-cite key="Radford2018ImprovingLU"></d-cite>. Over the last few years we have watched machine learning expand toward richer multimodal setups that fuse information sources <d-cite key="jiao-multimodal-survey"></d-cite>. Teams now blend sensors on autonomous platforms <d-cite key="panduru2025exploring"></d-cite>, translate content across formats such as image to text or text to speech, and pair visual and language prompts for both large language models <d-cite key="openai2024gpt4technicalreport"></d-cite> and image generators <d-cite key="rombach2022highresolutionimagesynthesislatent"></d-cite>. Multimodal development is vibrant and fast moving.
 
-As multi-modal models grow in popularity, so too does the need to assess their vulnerability to adversarial manipulation. Like all deep learning systems, their reliability, particularly in high-risk applications hinges on robustness against such attacks. Understanding how adversaries can exploit multi-modal systems, and how emerging dynamics between modalities give rise to both robustness and new vulnerabilities, is essential. While traditional models are known to be susceptible to input perturbations and data poisoning, current research offers limited insight into how these threats play out in multi-modal contexts.
+With that momentum comes a pressing need to evaluate how these systems handle adversarial pressure. Every deep learning stack depends on trust, especially when it supports safety critical decisions. We must understand how attackers can exploit multimodal pipelines and how the interaction between modalities shapes new strengths and new points of failure. While single modality models have a long history of research on perturbations and data poisoning, the community still has only partial visibility into how those threats appear when modalities overlap.
 
-Additionally, adversarial attacks on live on-policy models, particularly reinforcement learning agents, pose unique challenges. Unlike static classifiers these agents interact with dynamic environments, requiring tailored attack and defense strategies. The lack of labeled data in their training regimes further complicates implementation and design.
+Live reinforcement learning agents raise the stakes even further. These policies operate within dynamic environments rather than static classification tasks, so defenses must respect timing, feedback, and control constraints. They also learn without labeled supervision, which complicates how we adapt classic adversarial tooling.
 
-Exploring the effects of adversarial attacks on multi-modal models is quite important, as there are many critical and high-risk uses for RL policies such as in the fields of robotics and autonomous vehicles. In which a malfunctioning policy has potential to cause great bodily harm or significant damage to expensive equipment.
+Exploring the impact of these attacks on multimodal reinforcement learning is of critical importance because these agents also see use in high risk robotics and autonomous platforms. A brittle policy in those domains risks severe safety incidents and expensive hardware failures.
 
-As such, our work seeks to understand the interactions between adversarial attacks, defenses, and various combinations of modalities on a baseline multi-modal RL agent. We show relevant baseline data, and compare and contrast empirical results to reveal how different modalities effect model outputs when attacked both together or separately. We also show results that indicate what influence a single modality may have on model output compared to others, as well as how different modalities behave when left un-defended from an adversary, and how the behavior of modalities may change when defended.
+Our study aims to map the interplay between adversarial attacks, defense strategies, and modality combinations on a baseline multimodal reinforcement learning agent. We document baseline performance and walk through empirical findings that show how different modality pairings shift behavior when attacked jointly or separately. We highlight how influence varies by modality and how defensive choices reshape those dynamics when interacting with different modalities.
 
-To generate necessary datasets, train baseline models, and evaluate combinations of attacks and defenses on various modalities, we develop and release a pipeline extending open-source code provided by authors of DDiffPG <d-cite key="li2024learningmultimodalbehaviorsscratch"></d-cite>.
+To support this investigation we extend open-source code provided by authors of DDiffPG to create and release a full pipeline to prepare datasets, train reference models, and evaluate attack and defense mixes across modalities.
 
-Our contributions:
-- Provide a testbed for adversarial evaluation of a multi-modal RL agent.
-- Empirically characterize how attacking one or both modalities changes behavior.
-- Show that defenses introduce emergent patterns across modalities, sometimes improving robustness and sometimes destabilizing training-time adapted policies.
+In this blog post we'll talk about:
+- Providing a testbed for adversarial evaluation of a multi-modal RL agent.
+- Characterizing how attacking one or both modalities changes behavior.
+- Showing that defenses introduce emergent patterns across modalities, sometimes improving robustness and sometimes destabilizing policies.
 
 
 ### Background & Related Works
-Due to the popularity and prevalence of large language models, much research has gone into how adversarial attacks effect language models as multi-modal models that work on modalities such as text-to-image and image-to-text, with attacks focusing on various image and prompt manipulations <d-cite key="wu2025dissectingadversarialrobustnessmultimodal,wang2025manipulatingmultimodalagentscrossmodal"></d-cite>. However decision-making agents that operate on a combination of sensor inputs have had limited literature, primarily focusing on autonomous vehicles <d-cite key="chi_autonomous_survey2024,roheda2021multimodal"></d-cite>.
+Research on adversarial robustness has largely centered on language and vision systems, especially as large language models expanded into multimodal applications such as text to image and image to text experiences <d-cite key="wu2025dissectingadversarialrobustnessmultimodal,wang2025manipulatingmultimodalagentscrossmodal"></d-cite>. Investigations into decision making agents that blend multiple sensors remain comparatively sparse, with most of the attention directed toward autonomous driving stacks <d-cite key="chi_autonomous_survey2024,roheda2021multimodal"></d-cite>.
 
-As embodied agents begin to gain complexity and popularity, it is equally important to better understand how mixing modalities may alter model security. Learning how to further develop robust multi-modal models is vital for improving trust in agents with high-risk environments and tasks of ever increasing complexity.
+As embodied agents gain capability and broader deployment, we need a clearer view of how combined modalities influence security. Building resilient multimodal pipelines is essential for maintaining trust in systems that operate in high risk settings with steadily increasing task complexity.
 
 ### Adversarial Attacks
 Adversarial attacks are a branch of machine learning focused on manipulating model behavior in unintended or harmful ways. In particular, adversarial attacks are aimed at a "victim" model often designed with the flaws of a particular type of model or architecture in mind. These attacks typically involve introducing carefully designed "perturbations" to the input, which are intended to mislead or alter the model's outputs. Depending on the attacker's level of access to the internals of the model, attacks are classified as "white box" (full access, such as weights or gradient values), "gray box" (partial access, such as particular values or weights) or "black box" (no access at all, only inputs and outputs can be discerned around the black box). While perturbing inputs is the most common form of adversarial attack, other methods such as dataset "Poisoning" exist which alter training data to induce some desired behavior from the victim model.
 
+### Adversarial Attacks
+
+Adversarial attacks are a critical area of study in modern machine learning, focusing on how models can be manipulated into producing incorrect or harmful outputs. These attacks exploit weaknesses in model architectures or training processes by introducing subtle, carefully designed *perturbations* to the input data. Although these changes are often imperceptible to humans, they can drastically alter a model’s predictions, revealing vulnerabilities in even the most sophisticated AI systems.
+
+#### Types of Adversarial Attacks
+
+Adversarial attacks are typically categorized based on the attacker’s level of access to the model’s internal information:
+
+**1. White-Box Attacks**  
+In white-box attacks, the attacker has full access to the model’s internals, including parameters, gradients, and architecture details. This allows for precise and highly effective perturbations tailored to exploit specific weaknesses in the model.
+
+**2. Gray-Box Attacks**  
+Gray-box attacks occur when the attacker has only partial access to the model. They may know certain weights, gradients, or architecture components, but not the entire system. These attacks are less direct than white-box methods but still capable of misleading models effectively.
+
+**3. Black-Box Attacks**  
+In black-box attacks, the attacker has no insight into the model’s internal workings. They can only observe inputs and outputs, using this limited information to infer how to alter the input data. Black-box attacks often rely on query-based or transfer-based strategies to achieve success.
+
+#### Beyond Input Perturbations: Data Poisoning
+
+While most adversarial attacks occur during inference by altering input data, another powerful form of attack targets the **training phase** itself. Known as *data poisoning*, this method involves introducing manipulated samples into the training dataset. Over time, these poisoned samples bias the model’s learning process, leading to unintended or malicious behaviors once deployed.
+
+#### Importance of Adversarial Robustness
+
+As AI systems become increasingly integrated into critical domains such as healthcare, finance, and autonomous systems, ensuring their resilience to adversarial manipulation is essential. Developing models that can detect, resist, and adapt to these attacks is a cornerstone of building trustworthy, safe, and reliable machine learning applications.
+
 ### Adversarial Defenses
-Defenses against adversarial attacks have three main approaches: Augmenting training processes with adversarial samples <d-cite key="zizzo2021certified,tramer_adaptive_2020,kuzina_defending_2022"></d-cite>, detection of adversarial attacks, perturbations or anomalous data <d-cite key="roth_odds_2019,fidel_when_2020,guo_detecting_2019,GolchinAnomolyDetection"></d-cite>, and removing, filtering, or disrupting adversarial perturbations from the input data <d-cite key="zhang2021defense,nie_diffusion_2022,yoon_adversarial_2021"></d-cite>. For the purposes of our experiments, we utilize 3 methods for defense: Disruption, via gaussian noise; Detection, via neural network classifier and traditional clustering methods; Filtering, via Variational Auto-Encoder (VAE).
+Defending machine learning models against adversarial attacks is a multifaceted challenge that requires both proactive and reactive strategies. Broadly, adversarial defenses can be divided into three primary categories:
+
+#### 1. Adversarial Training
+This approach involves **augmenting the training process with adversarial samples** <d-cite key="zizzo2021certified,tramer_adaptive_2020,kuzina_defending_2022"></d-cite>. By exposing the model to perturbed examples during training, it learns to recognize and resist similar manipulations at inference time. Adversarial training effectively strengthens the model’s decision boundaries, making it more robust against future attacks.
+
+#### 2. Attack and Anomaly Detection
+Another common line of defense focuses on **detecting adversarial activity** by identifying perturbations, abnormal patterns, or suspicious data points before they can affect model performance <d-cite key="roth_odds_2019,fidel_when_2020,guo_detecting_2019,GolchinAnomolyDetection"></d-cite>. These methods often rely on secondary classifiers, statistical models, or clustering techniques to flag inconsistencies between normal and adversarial inputs.
+
+#### 3. Input Filtering and Perturbation Removal
+A third approach aims to **remove or disrupt adversarial perturbations** before the input reaches the model <d-cite key="zhang2021defense,nie_diffusion_2022,yoon_adversarial_2021"></d-cite>. Techniques in this category may apply noise injection, smoothing, or reconstruction mechanisms that effectively “clean” the input data, neutralizing the adversarial effect.
+
+#### Defense Methods Used in This Study
+In our experiments, we employ three specific defense mechanisms aligned with the categories above:
+
+- **Disruption:** Adding Gaussian noise to the input to reduce the impact of finely tuned perturbations.  
+- **Detection:** Utilizing a neural network classifier and traditional clustering techniques to identify anomalous inputs.  
+- **Filtering:** Applying a Variational Auto-Encoder (VAE) to reconstruct and denoise the input, effectively filtering out adversarial artifacts.
+
+Together, these methods provide complementary layers of protection, enhancing the overall robustness of the model against diverse forms of adversarial interference.
 
 ### Soft Actor-Critic Models
-Soft Actor-Critic (SAC) <d-cite key="haarnoja2018softactorcritic"></d-cite> models are a Reinforcement Learning (RL) algorithm designed to solve unsupervised tasks such as embodying the Ant-agent in our "Ant-Maze" task. It uses an "Actor", a neural network acting as the agent policy, and "Critic" (or multiple critics) network as a value estimator. The key difference between a "Soft" and traditional Actor-Critic is its use of an entropy term in its objective function, and the use of a stochastic policy with the intention of increasing training stability by encouraging exploration to avoid sub-optimal convergence.
+
+**Soft Actor-Critic (SAC)** <d-cite key="haarnoja2018softactorcritic"></d-cite> is a reinforcement learning (RL) algorithm designed for continuous control tasks, such as the Ant-agent used in our *Ant-Maze* experiments. SAC combines two key components: an **Actor**, which represents the agent’s policy, and one or more **Critics**, which estimate value functions to guide learning.
+
+What makes SAC “soft” compared to traditional Actor-Critic methods is its inclusion of an **entropy term** in the objective function. This encourages the policy to remain more stochastic during training, promoting exploration rather than premature convergence to sub-optimal behaviors. In effect, SAC balances learning performance with policy diversity, achieving both **stability** and **efficiency** in complex, high-dimensional environments.
 
 ## Methodology
 
 ### Agent
-To create a baseline agent, we train a Soft Actor-Critic (SAC) agent <d-cite key="haarnoja2018softactorcritic"></d-cite> to embody the MuJoCo Ant <d-cite key="todorov2012mujoco,towers2024gymnasium"></d-cite>, a quadruped controlled by 8 rotors (with one positioned at each joint) with 4 limbs comprised of 2 "Links" each conjoined by a joint rotor.
 
-The agent's observation space includes a velocity modality with linear and angular velocity using meters and radians per second, respectively. This includes velocities for all limbs and joints, including each limb link. Observations also include an angular modality in radians, tracking the angle between each link, the ant's torso orientation, as well as the angles of the limbs from the torso. Additionally, the model is supplied with a z-coordinate torso reading. A position in meters representing the torso's height from the ground. Importantly, all observations are formally unbounded with a range of (-Inf, Inf).
+To establish a baseline, we train a Soft Actor-Critic (SAC) agent <d-cite key="haarnoja2018softactorcritic"></d-cite> to control the MuJoCo Ant environment <d-cite key="todorov2012mujoco,towers2024gymnasium"></d-cite>. The Ant is a four-legged quadruped equipped with eight rotors, one at each joint, enabling coordinated movement across its four limbs, each composed of two interconnected links joined by a motorized joint.
+
+The agent’s observation space captures a comprehensive set of physical states to guide its behavior. It includes a velocity modality that records both linear and angular velocities (in meters and radians per second, respectively) for every limb, joint, and link of the Ant. Complementing this, an angular modality tracks joint angles in radians, covering the orientation between each limb link, the relative angles of the limbs to the torso, and the overall torso orientation.
+
+In addition, the agent receives a z-coordinate reading representing the torso’s height above the ground in meters. Notably, all observations are unbounded, formally defined within the continuous range (-∞, ∞), allowing unrestricted representation of the agent’s motion dynamics.
 
 The detailed observation space is outlined in the table below:
 
