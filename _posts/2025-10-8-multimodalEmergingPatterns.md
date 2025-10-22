@@ -325,13 +325,10 @@ With the modified FGSM attack ($\epsilon=0.005$) we perturb the observation vect
 When we perturb both modalities, reward traces reveal the story immediately. Sharp drops in the purple line show successful attacks, while quick recoveries indicate attack attempts that did not succeed. The path comparisons illustrate what those swings look like in the environment: a failed attack nudges the agent onto an alternate route, whereas a successful one leaves the agent wandering near the start.
 
 #### Attacking Individual Modalities
-We next apply the FGSM attack to the model's two modalities individually. FGSM is computed and applied only to the portion of the observation vector representing each chosen modality.
 
-The resulting effects on agent performance can be seen in the individual modality figure. We can see how both velocity (green line) and angle (blue line) modalities are effected differently in comparison to the attack on both modalities (purple line). It is important to note that velocity only represents about a quarter of the observation space.
+We then target each modality on its own with FGSM. The performance plot highlights how velocity (green) and angle (blue) perturbations differ from the full multimodal attack. Velocity covers roughly one quarter of the observation vector, so those attacks fail more often and produce more consistant reward. Angle perturbations cover more of the observation and are proportionally more effective.
 
-As such, we see the effects of the attack are proportional to how much of the observation a given modality represents. We can observe a greater frequency of peaks in reward when velocity is attacked, compared to angles or both together. This shows us a greater frequency of attack failure, and can be seen repeated to a smaller degree comparing the larger angular modality to attacking both. By order of modality size we see a nested behavior in which attacks on the smallest modality approximately upper bound performance compared to attacks on progressively larger portions of the observation.
-
-This allows us to draw an intuitive conclusion with empirical evidence: Effectiveness of attacking a modality is limited by how much of a model's input space is represented by that modality.
+These results reinforce a practical takeaway: the share of the observation space tied to a modality limits how much damage an attacker can cause when only that modality is manipulated. However this has potential to change on different systems, if an agent is severely biased towards using a single modality.
 
 <figure class="l-page">
   <img src="{{ '/assets/img/2025-10-08-multimodalEmergingPatterns/fgsm_eval.png' | relative_url }}" alt="FGSM evaluation performance." style="width: 100%; max-width: 600px;" />
