@@ -360,16 +360,18 @@ Modality-specific FGSM shows that attack effectiveness scales with the attacked 
 </figure>
 
 ### Attacking a Defended Model
-After observing the most basic interaction of an adversarial attack against a multimodal model, we show the effects and observability of such attacks when various preventative measures are taken.
+With the baseline established, we introduce defenses to see how they reshape the interaction between attacker and agent.
 
 #### Gaussian Noise Defense
-We employ a Gaussian noise filter as a baseline defense for the agent that attempts to disrupt attack perturbations by subtly altering all values in the observation with random noise perturbations. We sample noise with a mean of 0 and standard deviation 1, using a scaling factor of 0.005.
+The gaussian noise filter is the simplest option. We add noise drawn from a normal distribution with mean zero and standard deviation one, scaled by 0.005.
 
-As per the noise defense figures we can see that even a small amount of noise can disrupt the attack and result in a higher reward during adversarial evaluation. Additionally, training the model on noise helps reduce the effects of noise on agent performance, resulting in more frequent reward peaks and lower attack success frequency. We test the model both against noise only in evaluation as well as preemptively training it on noisy values. Regardless of whether the agent is trained on noisy data (orange line) or only encountering noise during evaluation (red line), both scenarios perform better than undefended perturbations (purple line).
+As shown in the noise defense results, even small amounts of injected noise can significantly disrupt the adversarial attack, leading to higher rewards during evaluation. Training the model with noise further improves its resilience, helping it adapt to the presence of randomness and reducing the attack’s overall success rate. In this setup, we evaluate two conditions: one where the model encounters noise only during evaluation, and another where it is pre-trained on noisy data.
 
-When testing the gaussian noise to attacks against specific modalities, we begin to see an interesting change in behavior. Attacks on the velocity modality replicated almost identical results to the multimodal noise defense, however we can observe an interesting change when the angular modality is targeted specifically.
+Both approaches, training with noise (orange line) and applying noise only during evaluation (red line), show clear improvements compared to the undefended model (purple line). The trained model in particular exhibits more frequent reward peaks and fewer sharp drops, indicating that controlled noise not only weakens the attacker’s influence but also enhances the model’s overall stability under adversarial conditions.
 
-Rather than follow the same pattern, training on noise appears to destabilize model performance more than it helps. We see in the angular noise defense figure that the best performing version of adding noise as a defense is when it is only included in evaluation, with the model never encountering noise during its training. It is unclear if this is due to this modality being the predominant data in the observation space for the agent, or if there are some other influencing factors. This was observed as consistent behavior across multiple runs.
+When applying Gaussian noise defenses to attacks targeting specific modalities, an interesting shift in behavior emerges. For velocity-targeted attacks, the results closely mirror those of the full multimodal noise defense, showing that noise effectively mitigates the attack’s impact. However, when the angular modality is targeted, the pattern changes noticeably.
+
+In this case, training the model on noisy angular data appears to destabilize performance rather than improve it. The angular noise defense results show that the best-performing configuration occurs when noise is introduced only during evaluation, without exposing the model to it during training. The reason for this discrepancy remains unclear, it may be related to the angular modality’s dominant influence within the observation space, or potentially other underlying interactions in the model’s learning dynamics. Regardless, this behavior was observed consistently across multiple runs, suggesting a modality-specific sensitivity to noise based defenses.
 
 <div class="l-page-outset">
   <div class="row">
@@ -389,11 +391,11 @@ Rather than follow the same pattern, training on noise appears to destabilize mo
 </div>
 
 #### Defense-VAE
-A small fully connected Defense-VAE improves evaluation rewards under FGSM when used only at evaluation. Training the agent on VAE-filtered inputs prevented solving the task. Under modality-specific attacks, the VAE generalized worst to single-modality perturbations, working best when both modalities were attacked.
 
-The VAE defense shows interesting behavior when applied to different attack scenarios. When both modalities are attacked simultaneously, the VAE provides substantial protection, as evidenced by the blue line in the VAE defense figures showing improved performance compared to the undefended purple line. However, when individual modalities are targeted, the VAE's effectiveness diminishes significantly.
+The compact Defense VAE offers another perspective. Running it only during evaluation lifts rewards under FGSM, but training the agent on VAE filtered inputs prevents the policy from solving the task. Single modality attacks expose its weaknesses: the VAE performs best when both modalities are perturbed together (as seen with the blue line in the figure below) and struggles with narrow attacks.
 
-This suggests that the VAE's training on paired benign-adversarial examples may have learned to recognize and correct perturbations that affect the entire observation space, but struggles to generalize to more targeted, modality-specific attacks. The defense appears to be most effective when the perturbation pattern matches the training distribution, which primarily consisted of full-observation attacks.
+
+This pattern alligns with how the VAE learned. Training on paired benign and adversarial samples covering the entire observation space primes it to recognize broad perturbations. Once the attacker focuses on a single modality the reconstruction no longer matches the training distribution, so protection fades.
 
 <div class="l-page-outset">
   <div class="row">
@@ -413,11 +415,10 @@ This suggests that the VAE's training on paired benign-adversarial examples may 
 </div>
 
 #### Detection Results (Summary)
-Across SVM, KNN, and a small NN detector, detection accuracy improved with higher $\epsilon$. Angular perturbations were more detectable at $\epsilon=0.007$, while velocity was more detectable at $\epsilon=0.015$. Clustering baselines (KMeans, GMM) were near chance on average.
 
-The clustering model metrics reveal more inconsistent findings. We can see from K-means and GMM, that using the angular perturbations at both magnitudes of FGSM allowed for better clustering accuracy than using the velocity perturbation data alone. Overall, adversarial detection is most accurate when both modalities are attacked, however perturbations to the angles of MuJoCo ant's joints are more easily detected than velocity perturbations.
+The classifier roundup shows a clear trend: higher $\epsilon$ values (stronger perturbations) make detection easier. Angular perturbations are more detectable in general, and stand out at $\epsilon=0.007$, while velocity attacks become more visible at $\epsilon=0.015$. However clustering baselines such as K means and GMM hover near chance overall.
 
-Critically, we also observe a difference between FGSM attack detectability depending on scaling factor epsilon. This indicates high sensitivity of scaling factor's effects on attack detection. Both result in approximately the same attack success rate, but one is substantially more detectable.
+The broader lesson is that modality combinations shift detection difficulty, and scaling the attack changes that balance even when success rates stay similar.
 
 The detailed results for all detection methods are shown in the table below:
 
