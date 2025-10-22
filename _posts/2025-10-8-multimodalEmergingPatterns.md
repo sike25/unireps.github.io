@@ -14,7 +14,7 @@ authors:
       name: Portland State University
   - name: Danielle Justo
     affiliations:
-      name: Portland State University
+      name: Smith College
   - name: Banafsheh Rekabdar
     affiliations:
       name: Portland State University
