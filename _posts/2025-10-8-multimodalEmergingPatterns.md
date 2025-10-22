@@ -266,22 +266,22 @@ Using the labeled dataset we train Support Vector Machines (SVM), K Nearest Neig
 Classifier accuracy reflects binary predictions on benign versus adversarial inputs. For the unsupervised clustering methods we assign cluster labels to maximize accuracy after fitting the two cluster model.
 
 ### Adversarial Evaluation
-To test the effects of adversarial attacks on our baseline agent across its modalities, we use the following process:
+We use the following process to test the effects of adversarial attacks on different modalities of our baseline agent:
 
 1. The agent is trained normally on benign inputs.
-2. Every evaluation episode, the attack is applied to perturb the input: First across both modalities simultaneously, then individually by modifying only the target modality values in the agent's observation vector.
-3. We compare benign training performance and adversarial evaluation to identify effects of the attack on the agent.
+2. Every evaluation episode, the input is perturbed with an attack: First across both modalities simultaneously, then focused on only target modalities in the agent's observation.
+3. Compare adversarial evaluation to benign training performance and identify effects of the attack on the agent.
 
-To develop a thorough understanding of model performance when defended, each defense method is applied in two configurations: In the first configuration, the model trains as normal, and the defense method is applied during evaluation, prior to the attacked data reaching the model. In the second configuration, the model also trains on benign inputs that have first been given to the defense method. The model is then attacked as usual. This helps compare the effects of model tuning on each defense.
+To better understand how defenses influence model performance, each defense method is tested under two different setups. In the first setup, the model is trained normally, and the defense is applied only during evaluation (filtering or otherwise "Defending" the input before it reaches the model). In the second setup, the model is also exposed to the defense during training by processing benign inputs through the same method before learning. The model is then attacked in the usual way. Comparing these two configurations reveals how much model tuning contributes to each defense’s effectiveness.
 
 ## Results
 
 ### Baseline Performance
-We train an SAC agent on the Ant Maze task for 3 Million steps to prepare our baseline agent such that it consistently solves the task of navigating around a simple obstacle. The agent is trained with a memory size of 1e6, a $\tau$ (soft update coefficient) of 0.05, and a $\gamma$ (discount factor) of 0.99.
+We begin by training an SAC agent on the Ant Maze task for three million steps so that it reliably clears a simple obstacle. The configuration mirrors common SAC settings with a replay buffer of one million transitions, $\tau=0.05$, and $\gamma=0.99$.
 
-The successful training progress of the SAC agent is shown in the figures below. We can see its training reward plateau after 3M steps, as well as the heatmap of exploration the agent takes finding an adequate route around the obstacle. Furthermore, evaluation performance reaches its maximum at the end of training, as well as the agent's pathing history showing its learned navigation from the start point to the goal.
+The figures below trace the training story. Rewards rise and level off after the run, the exploration heatmap shows how the agent learns an efficient route, and evaluation rewards peak once the policy stabilizes. The path visual confirms that the agent reaches the goal consistently.
 
-Without interference, we can consider this agent to have solved its task, at least for the simple single-obstacle arrangement it was trained to complete.
+With no adversarial pressure this baseline agent handles the maze it was trained on.
 
 <div class="l-page-outset">
   <div class="row">
@@ -318,12 +318,11 @@ Without interference, we can consider this agent to have solved its task, at lea
 </div>
 
 ### Attacking an Un-Defended Model
-Using the modified FGSM attack (with scaling factor 0.005) from the equation above, we target the agent's observation vector with perturbations during the agent's evaluation phase, throughout the training process. The intention of the attack is to maximize the loss according the "Critic" value function of the SAC algorithm. The adversarial perturbations effectively attempt to have the agent take actions that result in the lowest value state.
+With the modified FGSM attack ($\epsilon=0.005$) we perturb the observation vector during evaluation. The attack seeks the lowest value outcome predicted by the critic, pushing the policy toward poor decisions.
 
 #### Attacking Both Modalities
-We apply the attack on the entire input observation attacking both modalities, as can be seen in the figure below. Successful attacks can be seen by the sudden drops in reward (on the purple line indicating the attacked agent), and in the event the attack fails we see the performance return to its typical benign performance (as indicated by the red line). Importantly, we can also use this information to note the frequency with which an attack is successful via the width and frequency of these sharp dips in reward.
 
-To better visualize the effects of the attack, the path comparison figures juxtapose example steps in which the FGSM attack succeeds and fails as compared to their benign counterparts. The top pair of paths show a failed FGSM attack, that at best switches the direction with which the model navigates around the obstacle to its goal. However when the FGSM attack does succeed, we see the rate at which the agent gets lost increases to the extent that it often fails before leaving the initial starting area.
+When we perturb both modalities, reward traces reveal the story immediately. Sharp drops in the purple line show successful attacks, while quick recoveries indicate attack attempts that did not succeed. The path comparisons illustrate what those swings look like in the environment: a failed attack nudges the agent onto an alternate route, whereas a successful one leaves the agent wandering near the start.
 
 #### Attacking Individual Modalities
 We next apply the FGSM attack to the model's two modalities individually. FGSM is computed and applied only to the portion of the observation vector representing each chosen modality.
