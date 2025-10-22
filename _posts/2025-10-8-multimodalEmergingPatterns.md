@@ -210,49 +210,60 @@ Below is an illustration of the body and rotor layout used in our experiments:
 In addition to training the agent to embody its quadruped ant, we train it for the AI Gymnasium task "Ant Maze" <d-cite key="towers2024gymnasium"></d-cite>. This task requires the agent to learn how to walk with its body then utilize its learned movements to maneuver around obstacles to reach a predetermined destination. This can be seen in pathing and exploration heat map figures throughout this paper.
 
 ### Adversarial Attack
-We use the Fast Gradient Sign Method (FGSM) <d-cite key="goodfellow2015explaining"></d-cite> as our baseline attack to conduct all of our experiments. This is a white box attack that uses the sign vector of the gradient from the victim model to perturb images. Standard FGSM is:
+We rely on the Fast Gradient Sign Method (FGSM) <d-cite key="goodfellow2015explaining"></d-cite> as the baseline attack across our experiments. FGSM is a white box technique that perturbs inputs using the sign of the gradient from the victim model. The standard form is:
 
 $$
 \mathbf{x}_{\text{adv}} = \mathbf{x} + \epsilon\,\mathrm{sign}\big(\nabla_{\mathbf{x}} J(\theta,\mathbf{x},y)\big)
 $$
 
-Where $\mathbf{x}$ is the original input, $y$ is the true label, $\epsilon$ is a small scalar controlling the perturbation size, $J(\theta,\mathbf{x},y)$ is the loss function, $\nabla_{\mathbf{x}} J(\theta,\mathbf{x},y)$ is the gradient of the loss with respect to the input, $\mathrm{sign}(\cdot)$ is the element-wise sign function, and $\mathbf{x}_{\text{adv}}$ is the resulting adversarial example.
+- **$\mathbf{x}$**: The original input provided to the model.  
+- **$y$**: The true (ground-truth) label associated with the input.  
+- **$\epsilon$**: A small scalar value that controls the magnitude of the perturbation applied to the input.  
+- **$J(\theta, \mathbf{x}, y)$**: The loss function, parameterized by model weights $\theta$, input $\mathbf{x}$, and label $y$.  
+- **$\nabla_{\mathbf{x}} J(\theta, \mathbf{x}, y)$**: The gradient of the loss function with respect to the input, indicating how changes in $\mathbf{x}$ affect the loss.  
+- **$\mathrm{sign}(\cdot)$**: The element-wise sign function that extracts the direction (positive or negative) of each gradient component.  
+- **$\mathbf{x}_{\text{adv}}$**: The resulting adversarial example, formed by perturbing the original input $\mathbf{x}$ to maximize the model’s prediction error.
 
-It is important to note that two key changes were made in comparison to FGSM's source material. First, FGSM is typically employed as an attack against image classifiers and perturbations are often shown in the form of pixel values. To adapt the attack to our use case we apply similar perturbations in the vector form matching our observation space. This means perturbations represent values relative to which modality is being targeted (such as radians or meters per second).
 
-Second, FGSM is typically designed for attacking classification tasks where a label is present, hence the equation's use of a loss function given model parameters, inputs, and a label. However we must restructure the equation to use a different loss function matching that of the RL model, which is unsupervised (and has no labels). For RL without labels, we instead use the critic's Q-value to define a targeted degradation objective:
+#### Modifying FGSM
+
+FGSM is typically employed as an attack against image classifiers and perturbations are often in the form of pixel values. To get this to work in our case, we have to apply similar perturbations in the vector form matching our observation space. So we modify perturbations to represent values relative to which modality is being targeted (such as radians or meters per second).
+
+The **Fast Gradient Sign Method (FGSM)** is traditionally designed for **supervised learning** tasks, particularly in classification, where each input is paired with a corresponding label. In such cases, the attack relies on the loss function, which depends on the model parameters, input, and true label. However, applying FGSM directly to **reinforcement learning (RL)** models presents a unique challenge, as RL agents often don't use labeled data.
+
+To address this, we reformulate FGSM in the following way. Instead of using a label-based loss, we leverage the **critic’s Q-value** as the optimization target. The modified FGSM equation is expressed as:
 
 $$
 \mathbf{x}_{\text{adv}} = \mathbf{x} + \epsilon\,\mathrm{sign}\big(\nabla_{\mathbf{x}} Q_{\theta}(\mathbf{x}, a)\big)
 $$
 
-This change uses the Q function as per the "Critic" in our "Actor-Critic" model, rather than a direct loss based on class labels. This allows FGSM to be applied directly to the active policy, leveraging the Q-Network's valuation of the agent's action to generate adversarial perturbations.
+Here, the **Q-function** from the critic network replaces the conventional loss function. This adaptation enables FGSM to generate adversarial perturbations that specifically target the **policy’s valuation process**, influencing how the agent perceives the consequences of its actions. By perturbing inputs based on the critic’s gradients, we effectively reorient the attack for any unsupervised evaluation the critic is capable of.
 
 ### Adversarial Defenses
-As a baseline we employ a basic disruption method, using a scaled gaussian filter to disrupt perturbations with noise. Second, we test simple baseline adversarial detection methods by training a classifier to identify perturbed and un-perturbed "Benign" observations. Additionally we compare this detection method to traditional clustering algorithms K-Means and Gaussian Mixture Model (GMM) to detect anomalous data in the form of perturbations. We also test a purification method in the form of a defense VAE, a generative auto-encoder model that attempts to re-generate inputs as their benign equivalent.
+Our evaluation includes three defense themes. We start with a disruption baseline that applies scaled gaussian noise to the observation vector. We then explore adversarial detection by training classifiers to flag perturbed observations and compare them with traditional clustering tools such as K Means and Gaussian Mixture Models (GMM). Finally, we assess a purification pipeline built on a defense VAE that reconstructs benign versions of the inputs.
 
-Neural-Network-based and clustering-based adversarial detection methods are trained on a dataset gathered during the SAC training and evaluation process. While the SAC agent trains on 3 million steps, we allow the first half of training (first 1.5M steps) to proceed as a warm-up period. This helps prevent collecting faulty data before the agent can properly utilize its limbs, thus potentially resulting in too many strange or uncommon sensor readings. We allow training to continue uninterrupted for the final 1.5M steps, collecting and storing the agent's observation into a benign observation dataset. We then generate and store FGSM perturbed observations in an adversarial dataset without giving them to the agent, again preventing any bias towards strange or unreasonable sensor readings in the final dataset. Once collected, the dataset results in two 1.5M observation subsets, each observation paired with its adversarially perturbed counterpart.
+Both the neural network detectors and the clustering approaches rely on a dataset collected during SAC training and evaluation. The agent runs for three million steps. We treat the first one point five million steps as a warm up phase to avoid logging data from an agent that has not yet learned to move reliably. During the final 1.5 million steps we record observations into a benign dataset. We also generate a matching adversarial dataset by applying FGSM perturbations to those observations without feeding the altered signals back to the agent. The result is a paired corpus of benign and adversarial samples for every modality.
 
 #### Gaussian Noise Defense
-A Gaussian Noise filter was used as our baseline defense. As described in the equation below as a naive defense method, we sample additional perturbations from a normal gaussian distribution, then scale them down using scaling factor $\epsilon$:
+The gaussian noise filter serves as the baseline defense. We sample perturbations from a normal distribution and scale them by $\epsilon$:
 
 $$
 \mathbf{x_{def}} = x + \epsilon \cdot \mathbf{n}, \quad \text{where } \mathbf{n} \sim \mathcal{N}(0, \mathbf{I})
 $$
 
-The intuition behind this defense is that small perturbations crafted with the intention of manipulating model behavior are both specific as well as sensitive to change. Because of this, applying a noise filter can throw off perturbations and prevent successful attacks, opting for simple noise-induced performance degradation. While this defense may not result in the highest performance, it is by far the least sophisticated and computationally inexpensive baseline.
+Targeted adversarial perturbations are often sensitive to small changes. By injecting a modest level of noise we can disrupt their structure and blunt the attack, accepting some degradation from the added randomness. This approach is simple and computationally inexpensive.
 
 #### Defense VAE
-We base this defense method on prior work on creating a defense Variational-Auto-Encoder (Defense-VAE) <d-cite key="li2019defensevaefastaccuratedefense,shayanNDVAE"></d-cite>. It operates by training a VAE on a dataset containing pairs of benign and adversarial examples (such as the dataset we collect and describe at the top of this section). The encoder learns to encode both benign and adversarial samples, while the decoder reconstructs input using only the benign samples as labels for its loss. The end result is such that the encode-decode process learns a mapping from both benign and adversarial input spaces to a strictly benign output space.
+Our defense VAE follows prior work on variational autoencoder purification <d-cite key="li2019defensevaefastaccuratedefense,shayanNDVAE"></d-cite>. The model trains on paired benign and adversarial samples like those described above. The encoder observes both forms, while the decoder learns to reconstruct the benign target. Over time the encode decode pathway maps adversarial inputs back into the benign observation space.
 
-This methodology was adapted from image-based defense to a single dimensional input matching that of the observation vector. To achieve this, given the observations are substantially smaller in size, we create a downsized VAE that utilizes 4 fully connected layers with RELU activation in place of a deep convolutional neural network. Because the modalities are not time series-based nor positionally related we avoid the use of 1-D convolutions as well.
+We adapt the architecture from image defenses to match our one dimensional observation vector. The compact network uses four fully connected layers with ReLU activation rather than convolutional stacks. Since the modalities are not arranged as a sequence with positional structure, we also avoid one dimensional convolutions.
 
 #### Adversarial Detection
-The focus of these defense methods is to identify the presence of an attack. Our tests focus on accuracy of attack detection, and do not effect the model during its run time. This is primarily because detection is a separate process from handling a detected attack, which may include something like allowing the model to fail gracefully, reset its sensors, or some other combination of circumventive measures. However the effectiveness of these measures are their own research question and thus avoided. Rather, we track the accuracy and F1-score of various detection methods.
+Detection centric defenses focus on identifying an attack rather than intervening directly in the control loop. We therefore evaluate them on prediction accuracy and F1 score but do not alter the agent mid run. A production system could take many actions once an attack is detected, yet that follow up is outside the scope of this study.
 
-We test multiple baseline detection models trained to classify the presence of the attack. Our collected observation dataset is treated as a labeled dataset in which both benign and adversarial observations are labeled respectively and shuffled together for classification. Our tests include Support-Vector-Machines (SVM), K-Nearest Neighbors, and Neural Network classifiers, as well as more naive clustering methods K-means and Gaussian-Mixture-Models (GMM) to compare more complex classifiers against a more simple signal separation algorithm.
+Using the labeled dataset we train Support Vector Machines (SVM), K Nearest Neighbors, and neural network classifiers to distinguish benign from adversarial observations. For comparison we also fit simpler clustering approaches such as K means and Gaussian Mixture Models to the same data.
 
-Accuracy of the classifiers was determined by binary prediction accuracy (benign and adversarial classifications). Clustering methods are fit to separate data points into 2 clusters, each representing a potential class in which the more "favorable" label for accuracy is assigned to its respective class (due to the unsupervised nature of clustering algorithms).
+Classifier accuracy reflects binary predictions on benign versus adversarial inputs. For the unsupervised clustering methods we assign cluster labels to maximize accuracy after fitting the two cluster model.
 
 ### Adversarial Evaluation
 To test the effects of adversarial attacks on our baseline agent across its modalities, we use the following process:
