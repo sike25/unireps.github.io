@@ -80,7 +80,7 @@ For training data, Andreas and Klein use labels from the GENX dataset <d-cite ke
 Our dataset had 80,730 unique worlds of 5 objects each. Subsets were created using 72 unique rules which could be a single feature rule (‘red’), single feature negation (‘not red’), two features of different types joined by and/or (‘red and circle’, ‘triangle or thick-outline’). Skipping over world-rule combinations that resulted in empty subsets, we gathered a dataset of 1,705,833 entries.
 
 <figure>
-  <img src="./assets/img/2025-10-25-neural-babel/a-dataset-entry.jpg" alt="An example from our generated dataset." style="width:100%">
+  <img src="./assets/img/2025-10-25-neural-babel/dataset-entry.jpg" alt="An example from our generated dataset." style="width:100%">
   <figcaption>Fig. 3. An entry from our generated dataset.</figcaption>
 </figure>
 
@@ -142,7 +142,7 @@ Consider another example:
   <figcaption>Fig. 6. Predicted rules can perfectly describe the target subset but include other elements. We can consider this phenomenon ad a sign of partial learning.</figcaption>
 </figure>
 
-Notice that the predicted rule correctly describes all the objects in the target subset even though it incorrectly includes ‘green-circle’. Another adjusted metric tracked this measure– that the rule correctly describes all the selected objects. We called this the **description accuracy** and calculated it at **51.44%**.
+Notice that the predicted rule correctly describes all the objects in the target subset even though it incorrectly includes the purple triangle. Another adjusted metric tracked this measure– that the rule correctly describes all the selected objects. We called this the **description accuracy** and calculated it at **51.44%**.
 
 We also found that only **61% of predicted rules were even semantically valid**. Here are some real examples of malformed rules from our test set:
 
