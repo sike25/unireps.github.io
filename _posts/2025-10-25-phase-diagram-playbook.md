@@ -26,7 +26,7 @@ toc:
   - name: "Motivation and contribution"
   - name: "Pipeline overview"
     subsections:
-      - name:  "1) ELA-secure preprocessing (brief)"
+      - name:  "1) ELA-secure preprocessing (brief overview)"
       - name:  "2) Population-universal shared latent space"
       - name:  "3) Binarisation of latent time series"
       - name:  "4) Pairwise maximum-entropy (Ising) fitting"
@@ -211,6 +211,256 @@ For ELA, methods must enhance quality without compromising temporal structure. S
 Bandpass filtering can be performed if not already applied to the data - many recording devices perform it automatically. Temporal standardisation and spatial normalisation are not required for ELA itself but are retained for general use; spatial normalisation is applied for the imputation pipeline to align signs and amplitudes. LOESS may shift some series below zero; this is expected and accounted for. All parameterisations are chosen to remain strictly ELA-compatible.
 
   {% enddetails %}
+
+### Preprocessing Supplement I - biologically plausible imputation of time series for entire missing brain regions
+
+{% details Click to expand: Imputation %}
+
+
+### Brain-region imputation: why this sub-pipeline works
+
+This sub-pipeline fills in missing regional time series in whole-brain power-Doppler recordings while **preserving temporal structure** and providing **auditable quality checks**. It offers three complementary strategies and a common validation suite:
+
+### What the pipeline does (high-level summary)
+
+* **Detect & canonise**
+  Finds mice/runs with missing regions and re-indexes to a canonical (reference-mouse) ordering so every region has a stable label and posiion.
+
+* **Quantify bilateral coupling**
+  For each left/right pair it computes change-based correlation, raw correlation, directional agreement, magnitude coupling, lagged cross-correlation (with optimal lag), and frequency-domain coherence. These metrics tell us whether a contralateral trace is a **plausible shape donor** and provide thresholds for safe use.
+
+* **Offer three imputation routes**
+
+  1. **Bilateral (shape-copy with lag alignment):**
+     Mirrors the contralateral region after shifting by a **median optimal lag** estimated from reference mice. It **does not scale amplitudes** (we work in normalised units), preserving the on/off **shape** that matters for downstream binarisation / PMEM / ELA/PDA. Optional light noise can be added in a non-deterministic mode.
+
+  2. **Temporal (population median):**
+     Builds the missing series from the **median temporal pattern** of the same region across other mice (optionally across both runs). This is robust to outliers and yields stable reconstructions; with MAD-based jitter it can reflect natural variability while staying anchored to the cohort’s typical dynamics.
+
+  3. **Clustering / nearest-neighbours:**
+     Groups reference mice/runs for the same region using correlation or Euclidean distance and imputes from the **cluster mean** of the nearest group. This conditions the reconstruction on **matched dynamics**, often outperforming global medians when cohorts are heterogeneous. A 3-D PCA visualisation makes the neighbourhoods and the imputed point **inspectable**.
+
+* **Validate, don’t guess**
+  Every imputed series is compared to the population using:
+
+  * mean absolute deviation to the cross-mouse mean,
+  * correlation with that mean,
+  * **coverage** within 1–2 s.d.,
+  * change-correlation, peak cross-correlation and optimal lag,
+  * mean coherence and peak-coherence frequency,
+  * **power-spectrum correlation**.
+    These metrics are printed and plotted, so each imputation carries its own **provenance and QC**.
+
+### Why this is useful for downstream physics-style analyses
+
+* **Shape-faithful**: methods preserve **temporal switching** structure (crucial for binarisation → PMEM → ELA/PDA).
+* **Cohort-aware**: temporal and clustering routes borrow information only from the **same labelled region** across other mice/runs.
+* **Bilateral advantage**: when hemispheric symmetry is strong, lag-aligned mirroring recovers realistic trajectories with minimal bias.
+* **Transparent & reproducible**: seeds are fixed; thresholds are explicit; NaNs and edge cases are handled defensively; outputs are re-indexed to a canonical order.
+* **Method flexibility**: you can pick the route that best matches your biology (e.g., bilateral for symmetric circuits; clustering for diverse cohorts) and still get the **same validation bundle**.
+
+---
+
+### Figures
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-11-01 150710.png' | 
+  relative_url }}"
+       alt="Imputed Postrhinal area (R) time series overlaid with reference mice and population mean; bilateral change-scatter with metrics">
+  <figcaption style="color:var(--theme-text,#eaeaea)">
+    <strong>Imputation outcome and bilateral synchrony (Postrhinal area, R; Run&nbsp;1).</strong>
+    Top: the imputed trace (red) is plotted against reference mice (light blue) and the population mean (green); the y-axis is the normalised power-Doppler signal. Bottom: bilateral
+    <em>change</em> scatter (left minus right first differences) with the diagonal “perfect synchronisation” guide, a fitted trend line, and summary metrics (change-correlation, peak cross-correlation with its optimal lag, mean coherence). Together these panels show that the imputed series follows cohort-typical dynamics and remains temporally consistent with its contralateral partner.
+  </figcaption>
+</figure>
+
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-11-01 150758.png' | relative_url }}"
+       alt="Cross-correlation vs lag and magnitude-squared coherence for the imputed region across two runs">
+  <figcaption style="color:var(--theme-text,#eaeaea)">
+    <strong>Lag-structure and frequency-locking (Postrhinal area, R; Runs&nbsp;1–2).</strong>
+    For each run, the left panel shows cross-correlation across lags (dashed zero line for reference), and the right panel shows magnitude-squared coherence versus frequency. Peaks indicate preferred temporal offsets and shared frequency content; stable peaks across runs support consistent reconstruction rather than overfit noise.
+  </figcaption>
+</figure>
+
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-11-01 150815.png' | 
+   relative_url }}"
+       alt="Console-style validation summary listing deviation from population mean, coverage within 1–2 SD, temporal and spectral metrics">
+  <figcaption style="color:var(--theme-text,#eaeaea)">
+    <strong>Validation summary.</strong>
+    For each run the pipeline reports deviation from the population mean, correlation with the mean, coverage within 1–2 standard deviations, change-correlation, peak cross-correlation and optimal lag, mean coherence, and power-spectrum correlation. These values provide an audit trail for every imputation.
+  </figcaption>
+</figure>
+
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-11-01 150835.png' | 
+  relative_url }}"
+       alt="Console log showing missing region detection, reference coupling metrics, and selected imputation method for each run">
+  <figcaption style="color:var(--theme-text,#eaeaea)">
+    <strong>Pipeline provenance.</strong>
+    The log records which regions are missing, cohort-level bilateral coupling benchmarks used as context, and the selected imputation route (here, clustering-based). This makes method choice and inputs explicit for later review.
+  </figcaption>
+</figure>
+
+
+<div style="position:relative;width:100%;max-width:980px;height:0;padding-bottom:62%;">
+  <iframe
+    src="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-impu.html'  | relative_url }}"
+    title="Nearest-neighbours imputation — 3D PCA view"
+    loading="lazy"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+    allowfullscreen>
+  </iframe>
+</div>
+
+<p class="figure-caption" style="color:var(--theme-text,#eaeaea);margin-top:.5rem;">
+  <strong>Nearest-neighbours in PCA space (interactive).</strong>
+  Each marker is a reference mouse/run for the same region, embedded by PCA of the region’s time-series vectors; colours show clusters (nearest-neighbour groups). The <em>red diamond</em> is the imputed series; the <em>blue marker(s)</em> indicate the current mouse/run.
+
+
+
+{% enddetails %}
+
+
+### Preprocessing Supplement II — similarity assessment and conditional concatenation of recordings from different sessions for each mouse
+
+{% details Click to expand: Concatenation %}
+
+### Concatenating two recording runs per mouse
+
+This section documents the methodology we use to **decide whether two runs are similar enough to be concatenated**, how we **align** them when needed, and what diagnostics we plot to make the process auditable.
+
+### What “similar enough to concatenate” means
+
+Before concatenation, we compare the two runs **region-by-region** and turn the result into a single pass/fail decision.
+
+### 1) Regionwise similarity (time-domain patterns)
+
+For each region (r) present in both runs, we check a scalar **similarity** between its run-1 series (\mathbf{x}_r) and run-2 series (\mathbf{y}_r). Several options are available:
+
+* **Pearson correlation**: requires $$\mathrm{corr}!\big(\mathbf{x}_r,\mathbf{y}*r\big)\ \ge\ \tau*{\mathrm{corr}}.$$
+* **Spearman** (rank correlation): compute $$\rho\in[-1,1],$$ map to ([0,1]) by
+  $$\rho_{01}=\tfrac{1}{2},(\rho+1),$$
+  and require $$\rho_{01}\ \ge\ \tau_{\mathrm{spearman}}.$$
+  *(Good for monotone but non-linear similarity.)*
+* **Kendall’s (\tau)**: same mapping $$\tau_{01}=\tfrac{1}{2},(\tau+1),$$ require $$\tau_{01}\ \ge\ \tau_{\mathrm{kendall}}.$$
+* **Euclidean (shape) distance**: min–max normalise both series to ([0,1]), compute
+  $$d=\frac{\lVert \mathbf{x}*r-\mathbf{y}*r\rVert*{2}}{\sqrt{T}},$$
+  and require $$d\ \le\ \tau*{\mathrm{dist}}.$$
+  *(Insensitive to absolute scale; tests waveform similarity.)*
+* **Cosine similarity**: map $$\cos\theta\in[-1,1]$$ to ([0,1]) via
+  $$c_{01}=\tfrac{1}{2},(\cos\theta+1),$$
+  and require $$c_{01}\ \ge\ \tau_{\mathrm{cos}}.$$
+
+Each region yields a boolean pass/fail; the resulting vector is our **regionwise mask**.
+
+### 2) (Optional) Distribution similarity
+
+As a distributional check, we run a **two-sample Kolmogorov–Smirnov test** per region and declare a pass when the (p)-value exceeds a threshold, i.e. the two marginal distributions are not detectably different at the chosen level.
+
+### 3) Aggregating to a single gate
+
+We fuse regionwise pass/fail results into a final score using one of:
+
+* **fraction** (default): share of regions that pass; concatenate if $$\mathrm{fraction}\ \ge\ \tau_{\mathrm{agg}}.$$
+* **weighted**: same as above but weights each region by amplitude or variance.
+* **median / any / all**: robust/lenient/strict alternates.
+
+The gate is reported as:
+
+```
+[check_run_similarity] aggregator='<mode>', final_score=<value>, pass=<True|False>
+```
+
+Only if it **passes**, or if `force_concatenate=True`, do we proceed.
+
+### Alignment: making run-2 comparable to run-1
+
+If concatenation proceeds, we align **levels** of run-2 to run-1 **per region** (no temporal warping):
+
+* `alignment_mode='match_medians'` (default): for each region (r),
+  $$\mathbf{y}_r \leftarrow \mathbf{y}_r + \big(\mathrm{median}(\mathbf{x}_r)-\mathrm{median}(\mathbf{y}_r)\big).$$
+* Alternatively, `match_means` uses the mean instead of the median.
+
+**Why this is safe:** the ELA/PDA pipeline is driven by **on/off switching and relative changes**. Shifting a time series by a constant to match central tendency **does not** distort the temporal structure we use downstream.
+
+### Preprocessing before the gate (optional but recommended)
+
+Both runs can first pass through a light, ELA-secure preprocessing stack (despiking, robust outlier handling, LOESS detrending, mild smoothing). Parameters are seedable and adapt across regions. This improves the reliability of similarity estimates without changing the switching dynamics that matter later.
+
+### Concatenation step
+
+After alignment, we intersect region indices and **horizontally concatenate** the two runs (time dimension doubles). An optional last **outlier smoothing** can be applied to the concatenated trace using a robust IQR rule.
+
+### Diagnostics and what the plots show
+
+The helper `show_intermediate_concat_plots(...)` produces a **3×2** panel (if preprocessing is enabled):
+
+* **Row 1:** Run-1 RAW (left) and Run-2 RAW (right). Orange dashed line = mean; bright-green dashed line = median.
+* **Row 2:** Run-1 Preprocessed (left) and Run-2 Preprocessed (right) with the same guides.
+* **Row 3:** **Aligned Run-2** (left; grey dashed = pre-alignment, green = aligned) and **Final Concatenated** (right; with mean/median guides).
+
+A shared legend clarifies the mean/median guides. These views make the gating, alignment, and final result fully inspectable.
+
+---
+
+### Figures
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-11-01 154328.png' | relative_url }}"
+       alt="Console readout of regionwise similarity gate for multiple mice">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Run-similarity gate (console readout).</strong>
+    For each mouse, we compute a per-region similarity mask and aggregate it to a single decision.
+    The line shows the chosen aggregator, the final score, and pass/fail.
+    Only runs that pass are aligned and concatenated; failing pairs are skipped to avoid mixing incompatible sessions (although similarity checks can be manually overridden and the user could force concatenation anyway).
+  </figcaption>
+</figure>
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-11-01 154306.png' | relative_url }}"
+       alt="Six-panel plot illustrating raw runs, preprocessed runs, alignment of run 2 to run 1, and final concatenation with mean/median guides">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Concatenation diagnostics for a representative region.</strong>
+    <em>Top row:</em> raw run-1 (left, blue) and raw run-2 (right, red) with orange mean and bright-green median lines.  
+    <em>Middle row:</em> the same region after preprocessing.  
+    <em>Bottom-left:</em> alignment step—run-2 before (grey dashed) and after (green) median-matching to run-1.  
+    <em>Bottom-right:</em> final concatenated trace with mean/median guides. These panels document that the two runs are comparable, that level alignment has worked as intended, and that the final time series is suitable for downstream analyses.
+  </figcaption>
+</figure>
+
+---
+
+## Why this approach is robust and useful
+
+* **Prevents spurious mixing.** The gate stops concatenation when the two runs **do not** tell a consistent story for most regions. This protects subsequent ELA/PDA stages from artefactual discontinuities.
+* **Flexible similarity notions.** You can choose correlation-based (linear or rank), cosine (directional), or Euclidean-shape metrics, depending on whether absolute scale or monotonicity matters most for your data
+  The rank-based options (Spearman/Kendall) are especially **stable** for neural time series, where amplitude changes can be non-linear or non-stationary.
+* **Scale-safe alignment.** Median/mean level-matching fixes global offsets without altering temporal structure, keeping **on/off** switching intact—the key for binarisation and PMEM fitting.
+* **Transparent diagnostics.** The console summary and 3×2 figure make each decision inspectable. If a pair fails, you immediately see why; if it passes, you can verify that alignment has not introduced distortions.
+* **Configurable strictness.** Thresholds $$(\tau_{\mathrm{corr}},\ \tau_{\mathrm{spearman}},\ \tau_{\mathrm{dist}},\ \dots,\ \tau_{\mathrm{agg}})$$ and the aggregation rule control how strict the gate is. You can be conservative for clinical datasets and more permissive for exploratory work.
+
+---
+
+### Minimal recipe (what the functions do)
+
+1. **Preprocess** each run (optional, recommended).
+2. **Compute regionwise similarity** with your chosen method.
+3. **Aggregate** passes into a final gate score; stop if it fails.
+4. **Align levels** (`match_medians`/`match_means`) per region.
+5. **Concatenate** the two runs (time axis).
+6. **(Optional) Final outlier pass** on the concatenated series.
+7. **Plot diagnostics** for audit and reports.
+
+This procedure is **seeded, reproducible, and auditable**, and it keeps exactly the aspects of the signal that matter for your subsequent ELA/PDA pipeline.
+
+{% enddetails %}
+
+
 
 ---
 ## 2) Population-universal shared latent space
