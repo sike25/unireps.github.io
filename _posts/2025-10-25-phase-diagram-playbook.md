@@ -86,10 +86,10 @@ Modern whole‑brain recordings are heterogeneous across subjects, sessions, tas
 
 **Select practical advantages of our framework:**
 
-The workflow is largely standalone and implemented locally, from scratch - allowing researchers/analysts to adapt its workings to their exact needs - with numerical-stability and computational-efficiency improvements (relative to analogous implementations in the domain), novel algorithmic extensions (i.a. for multi-subject dimnensionality reduction, comparative phase diagram analysis of heterogenous brain dynamics), informative metrics and rich visualisations, and emphasis on **a)** automated parameter optimisation - not requiring domain expertise or significant prior experience with the pipeline from the user, **b)** data-driven model selection, **c)** data-modality universality and independece of heuristics/meta-knowledge throughout the entire design process, and **d)** availability of alternative methods and hyperparameters for key processing/modelling stages, so as to best fit the needs of the user 
+The workflow is largely standalone and implemented locally, from scratch - allowing researchers/analysts to adapt its workings to their exact needs - with numerical-stability and computational-efficiency improvements (relative to analogous implementations in the domain), novel algorithmic extensions (i.a. for multi-subject dimensionality reduction, comparative phase diagram analysis of heterogeneous brain dynamics), informative metrics and rich visualisations, and emphasis on **a)** automated parameter optimisation - not requiring domain-expertise or significant prior experience with the pipeline from the user, **b)** data-driven model selection, **c)** data-modality universality and independence of heuristics/meta-knowledge throughout the entire design process, and **d)** availability of alternative methods and hyperparameters for key processing/modelling stages, so as to best fit the needs of the user 
 
 **Limitations worth remembering:** 
-- Binarisation coarsens signals (whereas more granular discretisation becomes computationally prohibitve almost instantly for real-life data/problems)
+- Binarisation coarsens signals (whereas more granular discretisation becomes computationally prohibitive almost instantly for real-life data/problems)
 - Results depend on the selection of binarisation thresholds, dimensionality-reduction models and target counts of obtained latent features
 - For exact modelling methods, the set of possible states doubles in size with every additional feature/node/brain region
 - PDA assumes $$h\approx 0$$ and an SK‑like (Sherrington-Kirkpatrick) parametrisation
@@ -300,6 +300,7 @@ All methods preserve temporal ordering (only linear projections or orthogonal tr
 * Hungarian matching aligns component order across methods/subjects by maximal absolute correlations <d-cite key="kuhn1955hungarian"></d-cite>.
 * Neuro-Procrustes consensus: iterative, order-robust alignment across methods (SVD-based reference) with final sign harmonisation.
 * Optional biological sign protocol (baseline-anchored flips) to stabilise polarities across datasets.
+  
 ---
 
 ### 2.3 Metrics & selection (multi-objective, normalised to [0,1])
@@ -325,9 +326,9 @@ Kruskal stress (upper-triangle, variance-matched):
 {% raw %}
 $$
 \mathrm{Stress}_1
-=\min_{b>0}\sqrt{\frac{\sum_{i<j}\big(d_{ij}-b\hat d_{ij}\big)^2}
+=\min_{b>0}\sqrt{\frac{\sum_{i<j}\big(d_{ij}-b\,\hat d_{ij}\big)^2}
 {\sum_{i<j} d_{ij}^2}},\qquad
-b=\frac{\sum_{i<j} d_{ij},\hat d_{ij}}{\sum_{i<j} \hat d_{ij}^2}
+b^\star=\frac{\sum_{i<j} d_{ij}\,\hat d_{ij}}{\sum_{i<j} \hat d_{ij}^2}
 $$
 {% endraw %}
 
@@ -484,7 +485,7 @@ $$
 W_i \leftarrow U V^\top, \qquad \text{where } U \Sigma V^\top = \operatorname{SVD}\!\big(X_i^\top S\big).
 $$
 
-*The above formulation reflects our shared T assumption - since all the subjects from the dataset used for developing the pipeline had the exact same numebr of frames in their time series.
+*The above formulation reflects our shared-T assumption - since all the subjects from the dataset used for developing the pipeline had the exact same number of frames in their time series.
 
 ---
 
@@ -702,17 +703,9 @@ PMEM matches the empirical first and second moments with minimal assumptions whi
  
   Credible intervals come from $$\Sigma$$; optional Gamma hyper‑priors give ARD‑style shrinkage.
 
-  Here are pasting-ready figures + captions with visible text colour.
-
 ---
-
-Got it — here are the same two figures with **light, readable captions** (inline styles), in plain HTML for copy–paste.
-
----
-
 
 <!-- VB Ising / uncertainty diagnostics -->
-
 <figure class="l-page">
   <img
     src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20234938.png' | relative_url }}"
@@ -722,7 +715,7 @@ Got it — here are the same two figures with **light, readable captions** (inli
     Panels summarise one VB run:
     (i) posterior uncertainty vs coupling magnitude;
     (ii, v) heatmaps of posterior s.d. for couplings (diagonal masked; log-scale variant);
-    (iii) ELBO trajectory decreasing across iterations (convergence);
+    (iii) (negative) ELBO trajectory decreasing across iterations (convergence);
     (iv) histogram of field uncertainties;
     (vi) ARD precision spectrum indicating data-driven shrinkage;
     (vii) model-vs-empirical state probabilities (log–log; closer to the diagonal is better);
@@ -745,14 +738,12 @@ Got it — here are the same two figures with **light, readable captions** (inli
     Deviations at the extremes flag rare states and help identify outliers before landscape and phase-diagram analyses.
   </figcaption>
 </figure>
-::contentReference[oaicite:0]{index=0}
-
 
 ### Fit quality & sanity
 
 We report (i) moment matching (means and pairwise correlations), (ii) multi‑information explained and KL‑reduction vs. independence, and (iii) empirical‑vs‑Boltzmann pattern agreement. 
 
-For Monte‑Carlo checks we use multi‑chain sampling<d-cite key="metropolis1953mcmc"></d-cite> with **Ř**/effective sample size (ESS) <d-cite key="vehtari2021rhat"></d-cite> diagnostics and estimate observables (magnetisation $$m$$, Edwards–Anderson $$q$$, spin‑glass and uniform susceptibilities $$\chi_{\mathrm{SG}},\chi_{\mathrm{Uni}}$$, specific heat $$C$$).
+For Monte‑Carlo checks we use multi‑chain sampling<d-cite key="metropolis1953mcmc"></d-cite> with **R̂**/effective sample size (ESS) <d-cite key="vehtari2021rhat"></d-cite> diagnostics and estimate observables (magnetisation $$m$$, Edwards–Anderson $$q$$, spin‑glass and uniform susceptibilities $$\chi_{\mathrm{SG}},\chi_{\mathrm{Uni}}$$, specific heat $$C$$).
 
 ### Implementation highlights
 
@@ -765,7 +756,7 @@ PL uses mean‑field initialisation, symmetric updates, Armijo backtracking and 
 Once $$(h,J)$$ are fitted, the Ising energy
 
 $$
-E(\mathbf{s})=-\sum_i h_i s_i-\tfrac{1}{2}\sum_{i\neq j}J_{ij},s_i s_j
+E(\mathbf{s})=-\sum_i h_i s_i-\tfrac{1}{2}\sum_{i\neq j}J_{ij} s_i s_j
 $$
 
 induces a rugged energy landscape over $$\{-1,+1\}^N$$. 
@@ -803,9 +794,22 @@ Crucially, these mechanistic and interpretable descriptors and metrics provide a
 
 <!-- Energy Landscape Analysis (ELA) – composite panel --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-22%20225317.png' | relative_url }}" alt="Energy Landscape Analysis (ELA) panel with attractor patterns, 3D energy surface with basins and paths, transition matrices, disconnectivity graph, basin visit counts and basin sizes"> <figcaption style="color:#f5f7ff; text-shadow:0 1px 2px rgba(0,0,0,.55);"> <strong>Energy-Landscape Analysis (ELA) — summary descriptors.</strong> The composite figure illustrates the standard read-outs used downstream of the fitted Ising model: <br> <em>(A)</em> <strong>Local-minimum patterns</strong> (binary states for each attractor); <em>(B)</em> <strong>3-D energy surface</strong> with labelled minima (white dots) and most-probable transition paths (white arrows); <em>(C)</em> <strong>Direct transition counts</strong> between minima (Metropolis single-flip kernel); <em>(D)</em> <strong>Disconnectivity graph</strong> showing barrier heights that separate basins; <em>(E)</em> <strong>Basin visit frequencies</strong> (empirical occupancy); <em>(F)</em> <strong>Basin sizes</strong> (number of micro-states per basin in state-space); <em>(G)</em> <strong>Direct/indirect transition counts</strong> summarising multi-step reachability. Deeper basins and higher barriers indicate more stable, harder-to-leave states; denser transition lanes point to preferred switching routes. </figcaption> </figure>
 
+<!-- Basin graph — alternative A: per-basin microstate mosaics --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20161144.png' | relative_url }}" alt="Basin graph: mosaics of microstates grouped by attractor label with an energy colour bar"> <figcaption style="color:#eaeaea;"> <strong>Basin graph (alternative A: mosaics).</strong> Each panel corresponds to one attractor (State 1–18). Circles denote individual binary microstates assigned to that basin; circle colour encodes Ising energy (cooler = lower). This compact view shows how densely each basin occupies nearby configurations and highlights within-basin heterogeneity (broader colour spread ⇒ greater internal energy variance). </figcaption> </figure> 
+
+<!-- Basin graph — alternative B: directed neighbourhood graphs for selected basins --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20161034.png' | relative_url }}" alt="Directed neighbourhood graphs for selected basins with node colour = energy and arrowed transitions"> <figcaption style="color:#eaeaea;"> <strong>Basin graph (alternative B: directed neighbourhoods).</strong> For selected attractors (States 5–8), nodes are microstates (colour = energy) and arrows indicate admissible single-spin-flip moves under the Metropolis kernel. The layered, fan-shaped structure reflects typical downhill funnels into each attractor; sparse cross-links indicate rarer exits via saddles. </figcaption> </figure> 
+
+<!-- 3D energy landscape with transition skeleton --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20160912.png' | relative_url }}" alt="3D energy surface with numbered minima and white transition skeleton overlaid; colour bar shows energy"> <figcaption style="color:#eaeaea;"> <strong>3-D energy landscape.</strong> A continuous rendering of the fitted Ising energy with numbered minima (basins) and a white transition skeleton connecting them through low-saddle routes. Valleys (cool colours) are deep, stable basins; ridges quantify barrier heights that regulate switching. </figcaption> </figure> 
+
+<!-- 2D energy landscape (contours) with transition skeleton --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20160656.png' | relative_url }}" alt="2D contour map of energy with the same transition skeleton between minima; colour bar shows energy levels"> <figcaption style="color:#eaeaea;"> <strong>2-D energy landscape.</strong> The same landscape as a contour map. This top-down view makes it easy to read relative heights along paths and to spot alternative routes between basins (branch points near saddles). Together with the 3-D view, it provides complementary intuition about basin depth (3-D) and path geometry (2-D). </figcaption> </figure> 
+
+<!-- MFPT matrix --> <figure class="l-page" style="margin:1.2rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20234516.png' | relative_url }}" alt="Mean first-passage time (MFPT) matrix across all discrete states, sorted by basin index" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Mean first-passage times (MFPT).</strong> Heatmap of expected steps to reach each <em>target</em> state from each <em>start</em> state (both sorted by basin index). The bright diagonal reflects near-zero self-passage; block structure and asymmetric bands reveal easy vs hard cross-basin routes. White gridlines mark basin boundaries; the colour bar is in steps. </figcaption> </figure> 
+
+<!-- Dwell-time violins --> <figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20191024.png' | relative_url }}" alt="Per-basin dwell-time distributions (violins with overlaid points and summary markers)" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Dwell-time distributions per basin.</strong> For each attractor basin, the violin shows the full distribution of residence times (frames) from the single-spin-flip dynamics; points display individual visits. Wider violins and higher medians indicate kinetically stable basins; narrow shapes near 1–2 frames indicate transient basins. </figcaption> </figure> 
+
+<!-- Basin visits stripe plot --> <figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20191326.png' | relative_url }}" alt="Time-stripe raster showing the sequence of visited basins over the recording" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Basin-visit raster over time.</strong> Colour-coded stripe plot of the visited basin label across the recording. Long same-colour blocks correspond to sustained dwell periods; frequent colour changes indicate rapid switching. This readout complements MFPT and dwell-time summaries by exposing the temporal ordering of visits. </figcaption> </figure>
 
 ---
-## 6) Phase‑Diagram Analysis (PDA): multi‑observable placement
+## 6) Phase-Diagram Analysis (PDA): multi-observable placement
 
 **Goal:** 
 Place every subject on a *shared* Sherrington–Kirkpatrick‑like $$(\mu,\sigma)$$ phase surface using *multiple* observables at once, with uncertainty, so that cohorts become directly comparable without needing a fixed “healthy baseline”. PDA sits downstream of our shared‑latent → binarisation → Ising (PMEM) fit, and is designed to be robust, auditable, and reproducible from end to end. <d-cite key="edwards1975ea,sherrington1975sk,ezaki2020critical"></d-cite>
@@ -850,7 +854,7 @@ $$
 
 with all **fields zeroed** $$h_i\equiv 0$$ (diagonal remains 0) to recover the canonical spin‑glass phase structure. For each grid point we Monte‑Carlo sample the observables above and cache five surfaces $$\{\mathrm{m},\mathrm{q},\chi_{\mathrm{SG}},\chi_{\mathrm{Uni}},C\}$$.
 
-**Working vs display grids:** We build a high‑resolution *working* grid used for optimisation/placement and optionally a wider *display* grid for visuals. We automatically pick $$(\mu,\sigma)$$ limits by running quick PL fits per subject to estimate native $$(\hat\mu,\hat\sigma)$$, then expand by a safety factor; we refuse overly coarse grids (e.g., if $$\Delta\mu$$ or $$\Delta\sigma>0.01$$).
+**Working vs display grids:** We build a high‑resolution *working* grid used for optimisation/placement and optionally a wider *display* grid for visuals. We automatically pick $$(\mu,\sigma)$$ limits by running quick PL fits per subject to estimate native $$(\hat\mu,\hat\sigma)$$, then expand by a safety factor; we avoid overly coarse grids (e.g., if $$\Delta\mu$$ or $$\Delta\sigma>0.01$$).
 
 **MC convergence safeguards:** We run multiple chains with increasing sweep budgets until *all* observables reach $$\hat R<1.05$$ and an effective sample size threshold, or a maximum sweep cap is hit (in which case a warning is issued).
 
@@ -869,6 +873,30 @@ where $$\widehat{O}_k(\mu,\sigma)$$ is obtained by regular‑grid interpolation 
 
 We return $$(\hat\mu,\hat\sigma)$$, the final cost value, and the method used (“cost_minimisation”, “iso_curves”, or “fallback_grid”).
 
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-09-09 235654.png' | relative_url }}"
+       alt="3-D surface of specific heat C over sigma and mu with subject markers and a dashed ridge">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Specific-heat landscape \(C(\sigma,\mu)\) with cohort placements.</strong>
+    The dashed ridge marks a near-critical band where responsiveness inflates. Subjects cluster on the gentler
+    slope below the ridge; <em>the control mouse consistently occupies the lowest-\(\sigma\)</em> (least heterogeneous
+    couplings), as expected. This panel anchors the multi-observable placement on a shared surface.
+  </figcaption>
+</figure>
+
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-10-29 134043.png' | relative_url }}"
+       alt="3-D observable surface with two 2-D panels for q and chiSG over sigma and mu; subject points overlaid">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Cross-checks across observables.</strong>
+    A complementary 3-D view (top) with 2-D slices for <em>q</em> (left) and <em>\(\chi_{\mathrm{SG}}\)</em> (right).
+    Consistent subject ordering across panels indicates that placements are not driven by a single metric.
+    The control remains the lowest-\(\sigma\) point on the pooled reference.
+  </figcaption>
+</figure>
+
+
 ---
 
 ### 6.4  Uncertainty, robustness, and diagnostics
@@ -882,6 +910,41 @@ We return $$(\hat\mu,\hat\sigma)$$, the final cost value, and the method used (�
 **Group‑level tests:** Small helpers allow groupwise comparisons in $$\sigma$$ (e.g., Welch ANOVA and permutation tests) using the bootstrapped distributions.
 
 **Critical structure:** We plot *critical contours* (e.g., a fixed fraction of the maximum of an observable) on the display surfaces; a simple near‑criticality index is the minimal Euclidean distance from $$(\hat\mu,\hat\sigma)$$ to the chosen contour.
+
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-09-09 235914.png' | relative_url }}"
+       alt="Bootstrap means with 95% ellipses on the sigma–mu plane for each mouse">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>\(\mu\)–\(\sigma\) placements with uncertainty.</strong>
+    Dots show bootstrap means; ellipses are 95% confidence regions from circular block-bootstrap resamples.
+    Groupings separate along \(\sigma\) (heterogeneity), and the control consistently shows the
+    smallest \(\sigma\) on the pooled reference — a sanity check aligned with biological expectations.
+  </figcaption>
+</figure>
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-09-09 235737.png' | relative_url }}"
+       alt="2-D filled contour of the PDA objective around the optimum with the optimum marked">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Local 2-D cost surface (“identifiability map”).</strong>
+    Filled contours of the variance-balanced multi-observable discrepancy around the optimum in \((\sigma,\mu)\).
+    A tight, symmetric bowl indicates precise, well-conditioned placement; mild elongation reflects correlated
+    trade-offs between observables.
+  </figcaption>
+</figure>
+
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot 2025-09-09 235742.png' | relative_url }}"
+       alt="3-D surface view of the PDA objective around the optimum forming a convex bowl">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>3-D “cost bowl”.</strong>
+    The same objective shown as a 3-D surface. Clear curvature corroborates convergence and local identifiability.
+    (Together with the 2-D map above, this rules out flat minima or boundary locking.)
+  </figcaption>
+</figure>
+
 
 ---
 
@@ -905,12 +968,76 @@ We return $$(\hat\mu,\hat\sigma)$$, the final cost value, and the method used (�
 - **Border guard** prevents pathological “corner locking” when intersecting $$\chi$$‑iso‑curves on coarse grids.
 
 ---
-
 ### 6.7  Interpretation tips
 
-- **$$\mu$$** (mean coupling) captures net ordering tendency; **$$\sigma$$** (coupling dispersion) captures disorder/glassiness. Movement along $$\sigma$$ at constant $$\mu$$ corresponds to increasing heterogeneity at fixed mean interaction strength.  
-- **High $$\chi_{\mathrm{SG}}$$** with muted $$m$$ signals a spin‑glass‑like regime (multiple competing basins), while **high $$m$$ with low $$\chi_{\mathrm{SG}}$$** indicates ferromagnetic‑like ordering.  
-- **Specific heat $$C$$** often peaks near phase boundaries and can indicate broad susceptibility to perturbations in this coarse‑grained description.
+### Metric glossary:
+
+**$$\sigma$$ — network heterogeneity (dispersion of couplings)**  
+**Meaning:** standard deviation of off‑diagonal $$J_{ij}$$ on the reference surface.  
+**High:** uneven, subnetwork‑biased interactions; rugged energy landscape with many competing basins; dynamics readily reconfigured by *local* nudges.  
+**Low:** broadly uniform interactions; smoother coordination; fewer competing minima (less glassy).
+
+**$$\mu$$ — net coupling / co‑activation balance (mean coupling)**  
+**Meaning:** mean of off‑diagonal $$J_{ij}$$ (with $$h\approx 0$$ on the surface).  
+**High (positive):** stronger global ordering/co‑activation; coherent whole‑system shifts are easy.  
+**Low/negative:** interactions cancel or oppose; regions act more independently/segregate.
+
+**$$m$$ — magnetisation (whole‑brain activation bias)**  
+**Definition:** $$m=\tfrac{1}{N}\sum_i \langle s_i\rangle$$.  
+**Large $$|m|$$:** prolonged hypo‑ or hyper‑activation (tonic bias; long runs in one sign).  
+**Near 0:** balanced on/off usage.  
+**Note:** on the reference surface $$h=0$$, so any non‑zero $$m$$ reflects ordering from $$\mu$$ (or thresholding bias when computed directly from data).
+
+**$$q$$ — Edwards–Anderson order (pattern rigidity)**  
+**Definition:** $$q=\tfrac{1}{N}\sum_i \langle s_i\rangle^2$$ (persistence per unit regardless of sign).  
+**High:** recurring, “frozen” configurations; can be rigid even when $$m\approx 0$$ (symmetry‑related states).  
+**Low:** flexible/exploratory dynamics with weak per‑unit bias.
+
+**$$\chi_{\mathrm{SG}}$$ — spin‑glass susceptibility (sensitivity to *local* perturbations)**  
+**Meaning:** response to heterogeneous, small nudges; equals the sum of squared eigenvalues of the spin covariance (normalised by $$N$$).  
+**High:** small local changes can reconfigure the network; hallmark of glassy, high‑$$\sigma$$ regimes with many shallow basins.  
+**Low:** locally robust; topology resists piecemeal perturbations.
+
+**$$\chi_{\mathrm{Uni}}$$ — uniform susceptibility (sensitivity to a *global* nudge)**  
+**Meaning:** response when all units are pushed equally (normalised sum of pairwise covariances).  
+**High:** easy, coherent whole‑brain shift (often increases with $$\mu$$, decreases with $$\sigma$$).  
+**Low:** globally inertial/decoupled.
+
+**$$C$$ — specific heat (breadth of accessible repertoire)**  
+**Definition:** $$C=\big(\langle E^2\rangle-\langle E\rangle^2\big)/N$$, i.e., energy variance per unit.  
+**High:** wide repertoire; peaks near phase boundaries/critical bands (heightened responsiveness).  
+**Low:** narrow variability; stereotyped dynamics.
+
+---
+
+### Typical regimes (reading combinations):
+
+* **Ferromagnetic‑like:** $$\mu$$ high, $$\sigma$$ low → large $$\|m\|$$, high $$q$$, high $$\chi_{\mathrm{Uni}}$$, low $$\chi_{\mathrm{SG}}$$; $$C$$ can peak near the ordering boundary.
+* **Spin‑glass‑like:** $$\mu\approx 0$$, $$\sigma$$ high → $$m\approx 0$$ but $$q$$ elevated, $$\chi_{\mathrm{SG}}$$ high, $$\chi_{\mathrm{Uni}}$$ low; many metastable basins and irregular switching.
+* **Paramagnetic‑like:** $$\mu\approx 0$$, $$\sigma$$ low → $$m\approx 0$$, low $$q$$, both susceptibilities low, $$C$$ low; weak coordination, noise‑like exploration.
+* **Near‑critical band:** $$C$$ high with elevated susceptibilities; large fluctuations and long correlation lengths.
+
+---
+
+### Practical notes:
+
+* PDA surfaces set $$h\approx 0$$; placements therefore reflect coupling structure $$\big(\mu,\sigma\big)$$ rather than tonic biases.  
+* Compare subjects on the **same** reference (pooled vs control can shift absolute positions). Use uncertainty ellipses/cost bowls to judge identifiability.
+* Large $$\|m\|$$ in data space can arise from binarisation thresholds or residual trends—validate preprocessing.
+* PDA gives macroscopic coordinates; pair with ELA for basin‑level mechanisms (attractors, barriers, kinetics).
+
+---
+
+<figure class="l-page">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20135822.png' | relative_url }}"
+       alt="Five reference surfaces (m, q, chiSG, chiUni, C) over sigma and mu with subject placements">
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Multi-observable phase surfaces with subject placements.</strong>
+    Each panel shows an observable over \( (\sigma,\mu) \): top row — magnetisation \( m \), Edwards–Anderson order \( q \), spin-glass susceptibility \( \chi_{\mathrm{SG}} \); bottom row — uniform susceptibility \( \chi_{\mathrm{Uni}} \) and specific heat \( C \).
+    Points mark each subject’s placement on the pooled reference. The steep wing indicates a near-critical band; the control occupies the smallest \( \sigma \).
+  </figcaption>
+</figure>
+
 
 ---
 
@@ -965,13 +1092,9 @@ plot_cost_landscape(
 - The choice of reference surface (pooled vs control) can shift placements; we therefore expose the cost bowls and allow both options to be reported.  
 - Grid resolution and MC budgets matter near sharp boundaries; guards and diagnostics make this explicit.
 
-<div class="l-page">
-  <iframe src="{{ '/assets/plotly/pda_surface.html' | relative_url }}" frameborder="0" scrolling="no" height="520px" width="100%" style="border: 1px dashed grey;"></iframe>
-</div>
-
 ---
 
-## Results in a word
+## Results at a glance
 On resting-state functional ultrasound (fUS) recordings (mesoscopic, whole-brain), we observe low placement residuals $$(10^{-6}–10^{-4})$$, tight bootstrap confidence regions, convergent models, and stable ordering under pooled vs subgroup phase references; example estimates span **σ ≈ 0.15–0.32** and **μ ≈ −0.01 to +0.03**. The outputs - susceptibility to perturbations, ordering vs glassiness, transition propensity - form compact, biologically meaningful fingerprints. 
 
 For experimentalists, this is a mechanistic dashboard (what
@@ -985,14 +1108,14 @@ Overall, the multi-observable placement and the combination of shared embeddings
 ## Robustness, uncertainty and diagnostics
 
 - Uncertainty via variational-Bayes posteriors for h and J; bootstrap intervals for mu and sigma and for near-criticality; block bootstrap for autocorrelation <d-cite key="politis1992cbb,politis2004blocklength"></d-cite>
-- Convergence checks including MCMC R-hat and effective sample size <d-cite key="vehtari2021rhat"></d-cite> where applicable, pseudo-likelihood relative-norm stopping, and ELBO improvements for variational Bayes
+- Convergence checks including MCMC R̂ and effective sample size <d-cite key="vehtari2021rhat"></d-cite> where applicable, pseudo-likelihood relative-norm stopping, and ELBO improvements for variational Bayes
 - Quality-control gates including permutation or null thresholds for spurious minima, component-stability filters, and sensitivity to number of latents and alignment choice
 - Ablations: pooled versus subgroup reference surfaces; method toggles among SRM, MCCA, and ICA; median versus mean thresholds
 
 ---
 ## Reproducibility and artefacts
 
-We report key settings and diagnostics to make the computational provenance clear, even though the code is not released with this post. Runs are seed-controlled with machine-parsable configuration files; convergence (e.g., R-hat, ESS) and grid resolution checks are documented in the figure captions and text.
+We report key settings and diagnostics to make the computational provenance clear, even though the code is not released with this post. Runs are seed-controlled with machine-parsable configuration files; convergence (e.g., R̂, ESS) and grid resolution checks are documented in the figure captions and text.
 
 **Example configuration stub (indicative):**
 
@@ -1042,13 +1165,13 @@ reports:
 
 ## Outlook
 
-Population-universal latents combined with physics-grounded descriptors provide a shared language for multi-subject brain dynamics that is portable across modalities, tasks, and species, and a bridge to mechanistic interpretation and clinical translation. Planned extensions include multi-modal fusion, alignment-aware causal probes, and targeted clinical studies.
+Population-universal latents combined with physics-grounded descriptors provide a shared language for multi-subject brain dynamics that is portable across modalities, tasks, and species, and a bridge to mechanistic interpretation and clinical translation. Planned extensions include multi-modal fusion, alignment-aware causal probes, truly dynamic/directional extensions of the methodology (e.g., by incorporating Langevin-based methods and attractor networks), developing modular workflows for modelling the state-spaces of consecutive processing stages in the brain under cognitive tasks, and targeted clinical studies.
 
 ---
 
 ## Appendix: Mathematical details
 
-Below are the core mathematical underpinnings of the pseudo‑likelihood and variational‑Bayes alternatives to the exact‑likelihood pairwise maximum‑entropy model (PMEM / Ising), as well as of the relevant auxilliary methods (e.g., for VB, the ARD/shrinkage or convergence diagnostics).
+Below are the core mathematical underpinnings of the pseudo‑likelihood and variational‑Bayes alternatives to the exact‑likelihood pairwise maximum‑entropy model (PMEM / Ising), as well as of the relevant auxiliary methods (e.g., for VB, the ARD/shrinkage or convergence diagnostics).
 
 {% details Click to expand the entire Appendix %}
 
