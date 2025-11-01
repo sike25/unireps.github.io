@@ -122,6 +122,28 @@ Comparing whole-brain dynamics across individuals is hard without a common refer
 
 Resting-state fUS from N=8 mice (7 Cre-lox ASD models spanning 4 subtypes; 1 control with no symptomatic manifestation modelled); 54 bilateral regions (27 L/R pairs; whole-brain collection) - unified across all the subjects; two runs per mouse (1494 frames for each recording session; TR ≈ 0.6 s); runs concatenated per subject.
 
+
+<figure class="l-page">
+  <iframe
+    src="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-brain-regions-Louvain.html' | relative_url }}"
+    title="Interactive 3D Louvain graph of brain regions"
+    loading="lazy"
+    style="width:100%; aspect-ratio: 10 / 10; border:0;"
+    allowfullscreen
+  ></iframe>
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Interactive 3D Louvain graph of brain regions</strong>
+      <br><br>Nodes are brain regions positioned by a 3-D spring layout of the similarity network (edges drawn for weights above the threshold); colour encodes Louvain community and the colour bar shows cluster IDs. Hover tooltips display the region name and degree; drag/zoom to examine modules and bridge nodes; right.
+    <noscript>
+      <a href="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-brain-regions-Louvain.html' | relative_url }}">
+        Open the interactive figure.
+      </a>
+    </noscript>
+  </figcaption>
+</figure>
+
+
+
 ---
 
 ## 1) ELA-secure preprocessing (brief overview)
@@ -1021,6 +1043,10 @@ $$
 
 
 * We also estimate a depth threshold (null‑model percentile) to guard against spurious minima.
+
+
+
+
 
 
 **Kinetics (Markov view):** Build a single-spin-flip Metropolis chain with proposal “flip one spin uniformly” <d-cite key="metropolis1953mcmc"></d-cite> and transition probability:
