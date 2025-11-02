@@ -38,7 +38,6 @@ toc:
   - name: "Limitations and scope"
   - name: "Outlook"
 
-
 ---
 
 ## Overview (TL;DR)
@@ -59,8 +58,8 @@ Outputs include uncertainty, quality control, and interactive visuals. Methods a
 
 #### 1. Big‑picture overview - why shared latents + PMEM → ELA → PDA?
 Modern whole‑brain recordings are heterogeneous across subjects, sessions, tasks and modalities. If we analyse each participant in their own idiosyncratic space, descriptors of “brain state” are not directly comparable. Our pipeline solves this in two moves:
-1. Population‑universal shared latents. We align subjects into a common, low‑dimensional space (SRM / MCCA / Group PCA‑ICA with consensus). Variables have stable meaning across participants and runs, so everything downstream is comparable and reproducible.
-2. Physics‑grounded descriptors. On the binarised latents we fit a pairwise maximum‑entropy model (PMEM/Ising), then read out two complementary summaries:
+1. Population‑universal shared latents: We align subjects into a common, low‑dimensional space (SRM / MCCA / Group PCA‑ICA with consensus). Variables have stable meaning across participants and runs, so everything downstream is comparable and reproducible.
+2. Physics‑grounded descriptors: On the binarised latents we fit a pairwise maximum‑entropy model (PMEM/Ising), then read out two complementary summaries:
    
    * Energy‑Landscape Analysis (ELA) - an attractor‑and‑barrier view of the fitted Ising energy. It yields minima/basins, disconnectivity graphs, barrier spectra, and kinetic descriptors (basin dwell times, mean first-passage times (MFPTs), committors, relaxation times). This is the mechanistic, state‑space view.
    * Phase‑Diagram Analysis (PDA) - a macroscopic view that places each subject on the **($$\mu$$, $$\sigma$$)** plane of a disordered (via parametric perturbations) Ising model (SK‑like). In broad outline, it uses multiple observables at once to locate individuals relative to critical boundaries, providing cohort‑comparable coordinates and uncertainty.
@@ -125,22 +124,43 @@ Resting-state fUS from N=8 mice (7 Cre-lox ASD models spanning 4 subtypes; 1 con
 
 <figure class="l-page">
   <iframe
-    src="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-brain-regions-Louvain.html' | relative_url }}"
-    title="Interactive 3D Louvain graph of brain regions"
+    src="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-ELA.html' | relative_url }}"
+    title="Interactive 3D energy landscape of an example subject"
     loading="lazy"
     style="width:100%; aspect-ratio: 10 / 10; border:0;"
     allowfullscreen
   ></iframe>
   <figcaption style="color:var(--theme-text, #eaeaea)">
-    <strong>Interactive 3D Louvain graph of brain regions</strong>
-      <br><br>Nodes are brain regions positioned by a 3-D spring layout of the similarity network (edges drawn for weights above the threshold); colour encodes Louvain community and the colour bar shows cluster IDs. Hover tooltips display the region name and degree; drag/zoom to examine modules and bridge nodes; right.
+    <strong>Interactive 3D energy landscape for an example mouse</strong>
+      <br><br>
     <noscript>
-      <a href="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-brain-regions-Louvain.html' | relative_url }}">
+      <a href="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-ELA.html' | relative_url }}">
         Open the interactive figure.
       </a>
     </noscript>
   </figcaption>
 </figure>
+
+<figure class="l-page">
+  <iframe
+    src="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-ELA2.html' | relative_url }}"
+    title="Interactive 3D energy landscape of another example subject"
+    loading="lazy"
+    style="width:100%; aspect-ratio: 10 / 10; border:0;"
+    allowfullscreen
+  ></iframe>
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Interactive 3D energy landscape for another example mouse </strong>
+      <br><br> 
+    <noscript>
+      <a href="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-ELA2.html' | relative_url }}">
+        Open the interactive figure.
+      </a>
+    </noscript>
+  </figcaption>
+</figure>
+
+
 
 
 
@@ -160,13 +180,14 @@ Aim: remove spikes, outliers, and slow global drifts while **preserving the on/o
 <figure class="l-page">
   <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-26%20111942.png' | relative_url }}"
        alt="Five-step preprocessing pipeline panels for one region">
-  <figcaption style="color:#f5f5f5;background:rgba(0,0,0,.45);padding:.6rem .8rem;border-radius:8px;">
+  <figcaption style="color:#f5f5f5;background:rgba(45,45,0,.1);padding:.6rem .8rem;border-radius:8px;">
     Five-step preprocessing for a representative region (Striatum dorsal, R): Original → after despiking
     (derivative-based detection with local replacement) → after outlier removal (IQR with local context) →
     after universal LOESS detrending (global trend removed, transitions preserved) → after spatial
     normalisation to [0, 1].
   </figcaption>
 </figure>
+
 
 <figure class="l-page">
   <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-26%20111451.png' | relative_url }}"
@@ -362,32 +383,30 @@ Before concatenation, we compare the two runs **region-by-region** and turn the 
 
 ### 1) Regionwise similarity (time-domain patterns)
 
-For each region (r) present in both runs, we check a scalar **similarity** between its run-1 series (\mathbf{x}_r) and run-2 series (\mathbf{y}_r). Several options are available:
-
-* **Pearson correlation**: requires $$\mathrm{corr}!\big(\mathbf{x}_r,\mathbf{y}*r\big)\ \ge\ \tau*{\mathrm{corr}}.$$
-* **Spearman** (rank correlation): compute $$\rho\in[-1,1],$$ map to ([0,1]) by
-  $$\rho_{01}=\tfrac{1}{2},(\rho+1),$$
+For each region $$(r)$$ present in both runs, we check a scalar **similarity** between its run-1 series $$\mathbf{x}_r$$ and run-2 series $$\mathbf{y}_r$$. Several options are available:
+* **Pearson correlation**: requires $$\operatorname{corr}\big(\mathbf{x}_r,\mathbf{y}_r\big)\ \ge\ \tau_{\mathrm{corr}}.$$
+* **Spearman** (rank correlation): compute $$\rho\in[-1,1],$$ map to $$[0,1]$$ by
+  $$\rho_{01}=\tfrac{1}{2}(\rho+1),$$
   and require $$\rho_{01}\ \ge\ \tau_{\mathrm{spearman}}.$$
-  *(Good for monotone but non-linear similarity.)*
-* **Kendall’s (\tau)**: same mapping $$\tau_{01}=\tfrac{1}{2},(\tau+1),$$ require $$\tau_{01}\ \ge\ \tau_{\mathrm{kendall}}.$$
-* **Euclidean (shape) distance**: min–max normalise both series to ([0,1]), compute
-  $$d=\frac{\lVert \mathbf{x}*r-\mathbf{y}*r\rVert*{2}}{\sqrt{T}},$$
-  and require $$d\ \le\ \tau*{\mathrm{dist}}.$$
-  *(Insensitive to absolute scale; tests waveform similarity.)*
-* **Cosine similarity**: map $$\cos\theta\in[-1,1]$$ to ([0,1]) via
-  $$c_{01}=\tfrac{1}{2},(\cos\theta+1),$$
+  *(Good for monotone but non-linear similarity)*
+* **Kendall’s $$\tau$$**: same mapping $$\tau_{01}=\tfrac{1}{2}(\tau+1),$$ require $$\tau_{01}\ \ge\ \tau_{\mathrm{kendall}}.$$
+* **Euclidean (shape) distance**: min–max normalise both series to $$[0,1]$$, compute
+  $$d=\frac{\lVert \mathbf{x}_r-\mathbf{y}_r\rVert_2}{\sqrt{T}},$$
+  and require $$d\ \le\ \tau_{\mathrm{dist}}.$$
+  *(Insensitive to absolute scale; tests waveform similarity)*
+* **Cosine similarity**: map $$\cos\theta\in[-1,1]$$ to $$[0,1]$$ via
+  $$c_{01}=\tfrac{1}{2}(\cos\theta+1),$$
   and require $$c_{01}\ \ge\ \tau_{\mathrm{cos}}.$$
 
 Each region yields a boolean pass/fail; the resulting vector is our **regionwise mask**.
 
 ### 2) (Optional) Distribution similarity
 
-As a distributional check, we run a **two-sample Kolmogorov–Smirnov test** per region and declare a pass when the (p)-value exceeds a threshold, i.e. the two marginal distributions are not detectably different at the chosen level.
+As a distributional check, we run a **two-sample Kolmogorov–Smirnov test** per region and declare a pass when the $$p-value$$ exceeds a threshold, i.e. the two marginal distributions are not detectably different at the chosen level.
 
 ### 3) Aggregating to a single gate
 
 We fuse regionwise pass/fail results into a final score using one of:
-
 * **fraction** (default): share of regions that pass; concatenate if $$\mathrm{fraction}\ \ge\ \tau_{\mathrm{agg}}.$$
 * **weighted**: same as above but weights each region by amplitude or variance.
 * **median / any / all**: robust/lenient/strict alternates.
@@ -404,8 +423,10 @@ Only if it **passes**, or if `force_concatenate=True`, do we proceed.
 
 If concatenation proceeds, we align **levels** of run-2 to run-1 **per region** (no temporal warping):
 
-* `alignment_mode='match_medians'` (default): for each region (r),
-  $$\mathbf{y}_r \leftarrow \mathbf{y}_r + \big(\mathrm{median}(\mathbf{x}_r)-\mathrm{median}(\mathbf{y}_r)\big).$$
+* `alignment_mode='match_medians'` (default): for each region $$(r)$$,
+  $$
+  \mathbf{y}_r \leftarrow \mathbf{y}_r + \big(\operatorname{median}(\mathbf{x}_r)-\operatorname{median}(\mathbf{y}_r)\big)
+  $$
 * Alternatively, `match_means` uses the mean instead of the median.
 
 **Why this is safe:** the ELA/PDA pipeline is driven by **on/off switching and relative changes**. Shifting a time series by a constant to match central tendency **does not** distort the temporal structure we use downstream.
@@ -878,7 +899,7 @@ This respects component-specific baselines, keeps PMEM tractable, and standardis
 <figure class="l-page">
   <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-26%20183815.png' | relative_url }}"
        alt="Proportion of +1 (active) binary states across latents over time with linear trend, min and max markers">
-  <figcaption style="color:#f5f5f5;background:rgba(0,0,0,.45);padding:.6rem .8rem;border-radius:8px;">
+  <figcaption style="color:rgba(255, 255, 255, 0.84);padding:.6rem .8rem;border-radius:8px;">
     <strong>Binarisation sanity check: activity fraction over time.</strong>
     The blue trace shows, at each time step, the proportion of latents in the +1 state after per-latent
     median thresholding. The grey dashed line marks 0.5; orange dotted lines show the observed range
@@ -977,12 +998,17 @@ PMEM matches the empirical first and second moments with minimal assumptions whi
 
 ---
 
+<!-- VB-Ising quality report --> 
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20192129.png' | relative_url }}" alt="Variational Bayes quality report with posterior standard deviations, top z-scores, and coefficient-of-variation of couplings" style="width:100%;height:auto;border:1px solid rgba(255, 255, 255, 0.84); border-radius:8px;"
+W> <figcaption style="color:#e5e7eb"> <strong>VB-Ising diagnostics.</strong> Iteration summary and posterior uncertainties for fields/couplings. Large \(|z|=\lvert\mu\rvert/\sigma\) edges are strongly supported; high coefficient-of-variation flags potentially unstable couplings. Use these readouts to prioritise robust interactions when interpreting circuit-level dependencies. </figcaption> </figure>
+
+
 <!-- VB Ising / uncertainty diagnostics -->
 <figure class="l-page">
   <img
     src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20234938.png' | relative_url }}"
     alt="Variational Bayes Ising diagnostics: uncertainty vs magnitude, posterior sd(J) maps, ELBO trajectory, field uncertainties, ARD precision spectrum, data–model probability agreement, CV histogram, fit-quality indices">
-  <figcaption style="color:#f5f7ff; text-shadow:0 1px 2px rgba(0,0,0,.55);">
+  <figcaption style="color:#f5f7ff; text-shadow:0 1px 2px rgba(255, 255, 255, 0.84);">
     <strong>Variational-Bayes PMEM: uncertainty and fit checks.</strong>
     Panels summarise one VB run:
     (i) posterior uncertainty vs coupling magnitude;
@@ -1002,7 +1028,7 @@ PMEM matches the empirical first and second moments with minimal assumptions whi
   <img
     src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20234218.png' | relative_url }}"
     alt="Energy–probability diagnostic: empirical probability vs shifted energy with basin colours, histograms and slope fit">
-  <figcaption style="color:#f5f7ff; text-shadow:0 1px 2px rgba(0,0,0,.55);">
+  <figcaption style="color:#f5f7ff; text-shadow:0 1px 2px rgba(255, 255, 255, 0.84);">
     <strong>Energy–probability diagnostic.</strong>
     Empirical pattern probabilities \( P_{\mathrm{emp}}(\sigma) \) vs shifted energies \( E(\sigma)-E_{\min} \).
     An approximately linear trend in log-probability vs energy (dashed fit; slope and \( R^2 \) shown) is consistent with Boltzmann structure.
@@ -1016,6 +1042,19 @@ PMEM matches the empirical first and second moments with minimal assumptions whi
 We report (i) moment matching (means and pairwise correlations), (ii) multi‑information explained and KL‑reduction vs. independence, and (iii) empirical‑vs‑Boltzmann pattern agreement. 
 
 For Monte‑Carlo checks we use multi‑chain sampling<d-cite key="metropolis1953mcmc"></d-cite> with **R̂**/effective sample size (ESS) <d-cite key="vehtari2021rhat"></d-cite> diagnostics and estimate observables (magnetisation $$m$$, Edwards–Anderson $$q$$, spin‑glass and uniform susceptibilities $$\chi_{\mathrm{SG}},\chi_{\mathrm{Uni}}$$, specific heat $$C$$).
+
+
+<!-- PL fit & BM-Metropolis summary -->
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20192518.png' | relative_url }}" alt="Console log of pseudo-likelihood fit, correlation to empirical distribution, baseline vs PL error, BM-Metropolis sampling time" style="width:100%;height:auto;border:1px solid  ;border-radius:8px;"> <figcaption style="color:#f5f7ff"> <strong>Pseudo-likelihood fit and sampling check.</strong> The I2/IN ratio and correlation \(r\) quantify global match to empirical statistics; the PL error markedly improves the independent baseline. BM–Metropolis runtimes confirm that the fitted model is tractable for sampling-based validation and energy-landscape analyses.
+</figcaption> </figure>
+
+<!-- QC thresholds & table --> 
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20192606.png' | relative_url }}" alt="Console showing null-based QC thresholds and a table of m1_error, C_error, passed_QC for each mouse" style="width:100%;height:auto;border:1px solid rgba(255, 255, 255, 0.84); border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Null-based quality control.</strong> Thresholds for first-moment error \(m_1\) and configuration-error \(C\) are estimated from nulls; all shown mice pass. This guards against over-fitting and ensures that downstream landscape metrics (barriers, relaxation) rest on statistically credible fits. 
+</figcaption> </figure>
+
+<!-- Bootstrap accuracies -->
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20193023.png' | relative_url }}" alt="Console listing bootstrap accuracy estimates with 95% confidence intervals for each mouse/run" style="width:100%;height:auto;border:1px solid rgba(255, 255, 255, 0.88); border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Bootstrap accuracy with 95% CIs.</strong> For each mouse we report resampled accuracies and confidence intervals, quantifying the stability of the fitted model against sampling noise — a practical measure of reliability for comparative neuroscience. </figcaption> </figure>
+
 
 ### Implementation highlights
 
@@ -1041,9 +1080,13 @@ $$
 \overline{E}_{\alpha\alpha'} = \min_{\gamma: \alpha\to\alpha'}\ \max_{\mathbf{s}\in\gamma} E(\mathbf{s}).
 $$
 
-
 * We also estimate a depth threshold (null‑model percentile) to guard against spurious minima.
 
+
+
+
+<!-- Barrier-height distribution --> 
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20193305.png' | relative_url }}" alt="Histogram and KDE of pairwise basin barrier heights with median shown" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Distribution of pairwise barrier heights.</strong> Histogram of inferred barrier heights \(\overline{E}_{\alpha,\alpha'}\) between metastable basins in the fitted landscape; the dashed line marks the sample median. Mechanistically, more negative/lower barriers indicate easier inter-basin switches, whereas rarer higher barriers point to protected transitions. The spread quantifies heterogeneity of switching difficulty across the mouse’s brain-state repertoire. </figcaption> </figure>
 
 
 
@@ -1059,36 +1102,97 @@ where $$\mathbf{s}^{(i)}$$ is $$\mathbf{s}$$ with spin $$i$$ flipped. This yield
 
 **From $$P$$ we derive:**
 
-* Stationary distribution $$\pi$$, dwell-time distributions, and basin occupancy.
-* Mean first-passage times (MFPT): from a set $$A$$ to $$B$$ via the fundamental matrix $$Z=(I-Q)^{-1}$$ of the transient block <d-cite key="kemeny1960finite"></d-cite>.
-* Committors $$q_{AB}$$ solving $$(I-Q)q=b$$, where $$b$$ collects transitions into $$B$$ <d-cite key="e2006tpt"></d-cite>.
-* Relaxation spectrum (mixing time-scales): non-unit eigenvalues $$\lambda_i(P)$$ with $$\tau_i=-1/\log\|\lambda_i\|$$, and the Kemeny constant (mean mixing time) $$K=\sum_{i\ge2}\frac{1}{1-\lambda_i}$$.
+*	Stationary distribution $$\pi$$, dwell-time distributions, and basin occupancy.
+*	Mean first-passage times (MFPT): from a set $$A$$ to $$B$$ via the fundamental matrix $$Z=(I-Q)^{-1}$$ of the transient block <d-cite key="kemeny1960finite"></d-cite>.
+*	Committors $$q_{AB}$$ solving $$(I-Q),q=b$$, where $$b$$ collects transitions into $$B$$ <d-cite key="e2006tpt"></d-cite>.
+*	Relaxation spectrum (mixing time-scales): non-unit eigenvalues $$\lambda_i(P)$$ with $$\tau_i=-1/\log\lvert\lambda_i\rvert$$, and the Kemeny constant (mean mixing time) $$K=\sum_{i\ge 2}\frac{1}{1-\lambda_i}$$.
+
+
+
+<!-- Dwell-time distribution -->
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20191607.png' | relative_url }}" alt="Log-PDF of dwell times in steps" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Dwell-time distribution (empirical).</strong> The heavy right tail on a log-PDF axis is consistent with near-geometric escape from basins. Longer dwells reflect stabilised neural configurations (metastability), while short dwells reflect rapid exploration; the slope encodes an effective leaving rate. </figcaption> </figure>
+
+
+
+<!-- Slow relaxation spectrum -->
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20191630.png' | relative_url }}" alt="Stem plot of slow relaxation times versus mode index" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Slow relaxation spectrum.</strong> Relaxation times \(tau_i\) (from the fitted Markov operator) quantify how quickly perturbations along each mode decay. A dominant \(tau_1\) and a gap to subsequent modes signal slow inter-basin exchange and long memory in the dynamics — a hallmark of metastable neural regimes. </figcaption> </figure>
+
+<!-- Empirical committor -->
+<figure class="l-page" style="margin:1.6rem 0">
+  <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20191557.png' | relative_url }}"
+       alt="Histogram of empirical committor values from A to B"
+       style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;">
+
+  <figcaption style="color:#e5e7eb">
+    <strong>Empirical committor \(q_i\) for \(A=[150]\to B=[1309]\).</strong>
+    The committor is the forward-commitment probability that a state first hits \(B\) before \(A\).
+    Mass near \(q_i\approx 0\) indicates most visited states lie closer to \(A\); states with \(q_i\approx 0.5\)
+    are transition-like and highlight probable dynamical bottlenecks in the brain’s state graph.
+  </figcaption>
+</figure>
+
 
 **Read-outs:** (i) attractor maps (patterns + labels), (ii) disconnectivity graphs, (iii) barrier distributions, (iv) transition/reachability matrices (one-step and multi-step), and (v) kinetic summaries (MFPT heatmaps, committor fields, relaxation spectra, Kemeny constants). These quantify stability, switching propensity, and heterogeneity of access between states.
 
 Crucially, these mechanistic and interpretable descriptors and metrics provide an additional high-level framework for comparing brain dynamics across different individuals, or even cohorts with systematically divergent patterns of neural activity - a discrete and more intuitive alternative to classic means for unifying/juxtaposing representations in computational systems. 
 
-<!-- Energy Landscape Analysis (ELA) – composite panel --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-22%20225317.png' | relative_url }}" alt="Energy Landscape Analysis (ELA) panel with attractor patterns, 3D energy surface with basins and paths, transition matrices, disconnectivity graph, basin visit counts and basin sizes"> <figcaption style="color:#f5f7ff; text-shadow:0 1px 2px rgba(0,0,0,.55);"> <strong>Energy-Landscape Analysis (ELA) — summary descriptors.</strong> The composite figure illustrates the standard read-outs used downstream of the fitted Ising model: <br> <em>(A)</em> <strong>Local-minimum patterns</strong> (binary states for each attractor); <em>(B)</em> <strong>3-D energy surface</strong> with labelled minima (white dots) and most-probable transition paths (white arrows); <em>(C)</em> <strong>Direct transition counts</strong> between minima (Metropolis single-flip kernel); <em>(D)</em> <strong>Disconnectivity graph</strong> showing barrier heights that separate basins; <em>(E)</em> <strong>Basin visit frequencies</strong> (empirical occupancy); <em>(F)</em> <strong>Basin sizes</strong> (number of micro-states per basin in state-space); <em>(G)</em> <strong>Direct/indirect transition counts</strong> summarising multi-step reachability. Deeper basins and higher barriers indicate more stable, harder-to-leave states; denser transition lanes point to preferred switching routes. </figcaption> </figure>
+<!-- Energy Landscape Analysis (ELA) – composite panel --> 
+<figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-22%20225317.png' | relative_url }}" alt="Energy Landscape Analysis (ELA) panel with attractor patterns, 3D energy surface with basins and paths, transition matrices, disconnectivity graph, basin visit counts and basin sizes"> <figcaption style="color:#f5f7ff; text-shadow:0 1px 2px rgba(0,0,0,.55);"> <strong>Energy-Landscape Analysis (ELA) — summary descriptors.</strong> The composite figure illustrates the standard read-outs used downstream of the fitted Ising model: <br> <em>(A)</em> <strong>Local-minimum patterns</strong> (binary states for each attractor); <em>(B)</em> <strong>3-D energy surface</strong> with labelled minima (white dots) and most-probable transition paths (white arrows); <em>(C)</em> <strong>Direct transition counts</strong> between minima (Metropolis single-flip kernel); <em>(D)</em> <strong>Disconnectivity graph</strong> showing barrier heights that separate basins; <em>(E)</em> <strong>Basin visit frequencies</strong> (empirical occupancy); <em>(F)</em> <strong>Basin sizes</strong> (number of micro-states per basin in state-space); <em>(G)</em> <strong>Direct/indirect transition counts</strong> summarising multi-step reachability. Deeper basins and higher barriers indicate more stable, harder-to-leave states; denser transition lanes point to preferred switching routes. </figcaption> </figure>
 
-<!-- Basin graph — alternative A: per-basin microstate mosaics --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20161144.png' | relative_url }}" alt="Basin graph: mosaics of microstates grouped by attractor label with an energy colour bar"> <figcaption style="color:#eaeaea;"> <strong>Basin graph (alternative A: mosaics).</strong> Each panel corresponds to one attractor (State 1–18). Circles denote individual binary microstates assigned to that basin; circle colour encodes Ising energy (cooler = lower). This compact view shows how densely each basin occupies nearby configurations and highlights within-basin heterogeneity (broader colour spread ⇒ greater internal energy variance). </figcaption> </figure> 
+<!-- Basin graph — alternative A: per-basin microstate mosaics --> 
+<figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20161144.png' | relative_url }}" alt="Basin graph: mosaics of microstates grouped by attractor label with an energy colour bar"> <figcaption style="color:#eaeaea;"> <strong>Basin graph (alternative A: mosaics).</strong> Each panel corresponds to one attractor (State 1–18). Circles denote individual binary microstates assigned to that basin; circle colour encodes Ising energy (cooler = lower). This compact view shows how densely each basin occupies nearby configurations and highlights within-basin heterogeneity (broader colour spread ⇒ greater internal energy variance). </figcaption> </figure> 
 
 <!-- Basin graph — alternative B: directed neighbourhood graphs for selected basins --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20161034.png' | relative_url }}" alt="Directed neighbourhood graphs for selected basins with node colour = energy and arrowed transitions"> <figcaption style="color:#eaeaea;"> <strong>Basin graph (alternative B: directed neighbourhoods).</strong> For selected attractors (States 5–8), nodes are microstates (colour = energy) and arrows indicate admissible single-spin-flip moves under the Metropolis kernel. The layered, fan-shaped structure reflects typical downhill funnels into each attractor; sparse cross-links indicate rarer exits via saddles. </figcaption> </figure> 
 
-<!-- 3D energy landscape with transition skeleton --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20160912.png' | relative_url }}" alt="3D energy surface with numbered minima and white transition skeleton overlaid; colour bar shows energy"> <figcaption style="color:#eaeaea;"> <strong>3-D energy landscape.</strong> A continuous rendering of the fitted Ising energy with numbered minima (basins) and a white transition skeleton connecting them through low-saddle routes. Valleys (cool colours) are deep, stable basins; ridges quantify barrier heights that regulate switching. </figcaption> </figure> 
+<!-- 3D energy landscape with transition skeleton --> 
+<figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20160912.png' | relative_url }}" alt="3D energy surface with numbered minima and white transition skeleton overlaid; colour bar shows energy"> <figcaption style="color:#eaeaea;"> <strong>3-D energy landscape.</strong> A continuous rendering of the fitted Ising energy with numbered minima (basins) and a white transition skeleton connecting them through low-saddle routes. Valleys (cool colours) are deep, stable basins; ridges quantify barrier heights that regulate switching. </figcaption> </figure> 
 
-<!-- 2D energy landscape (contours) with transition skeleton --> <figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20160656.png' | relative_url }}" alt="2D contour map of energy with the same transition skeleton between minima; colour bar shows energy levels"> <figcaption style="color:#eaeaea;"> <strong>2-D energy landscape.</strong> The same landscape as a contour map. This top-down view makes it easy to read relative heights along paths and to spot alternative routes between basins (branch points near saddles). Together with the 3-D view, it provides complementary intuition about basin depth (3-D) and path geometry (2-D). </figcaption> </figure> 
+<!-- 2D energy landscape (contours) with transition skeleton --> 
+<figure class="l-page"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-10-11%20160656.png' | relative_url }}" alt="2D contour map of energy with the same transition skeleton between minima; colour bar shows energy levels"> <figcaption style="color:#eaeaea;"> <strong>2-D energy landscape.</strong> The same landscape as a contour map. This top-down view makes it easy to read relative heights along paths and to spot alternative routes between basins (branch points near saddles). Together with the 3-D view, it provides complementary intuition about basin depth (3-D) and path geometry (2-D). </figcaption> </figure> 
 
-<!-- MFPT matrix --> <figure class="l-page" style="margin:1.2rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20234516.png' | relative_url }}" alt="Mean first-passage time (MFPT) matrix across all discrete states, sorted by basin index" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Mean first-passage times (MFPT).</strong> Heatmap of expected steps to reach each <em>target</em> state from each <em>start</em> state (both sorted by basin index). The bright diagonal reflects near-zero self-passage; block structure and asymmetric bands reveal easy vs hard cross-basin routes. White gridlines mark basin boundaries; the colour bar is in steps. </figcaption> </figure> 
+<!-- MFPT matrix --> 
+<figure class="l-page" style="margin:1.2rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20234516.png' | relative_url }}" alt="Mean first-passage time (MFPT) matrix across all discrete states, sorted by basin index" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Mean first-passage times (MFPT).</strong> Heatmap of expected steps to reach each <em>target</em> state from each <em>start</em> state (both sorted by basin index). The bright diagonal reflects near-zero self-passage; block structure and asymmetric bands reveal easy vs hard cross-basin routes. White gridlines mark basin boundaries; the colour bar is in steps. </figcaption> </figure> 
 
-<!-- Dwell-time violins --> <figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20191024.png' | relative_url }}" alt="Per-basin dwell-time distributions (violins with overlaid points and summary markers)" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Dwell-time distributions per basin.</strong> For each attractor basin, the violin shows the full distribution of residence times (frames) from the single-spin-flip dynamics; points display individual visits. Wider violins and higher medians indicate kinetically stable basins; narrow shapes near 1–2 frames indicate transient basins. </figcaption> </figure> 
+<!-- Dwell-time violins --> 
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20191024.png' | relative_url }}" alt="Per-basin dwell-time distributions (violins with overlaid points and summary markers)" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Dwell-time distributions per basin.</strong> For each attractor basin, the violin shows the full distribution of residence times (frames) from the single-spin-flip dynamics; points display individual visits. Wider violins and higher medians indicate kinetically stable basins; narrow shapes near 1–2 frames indicate transient basins. </figcaption> </figure> 
 
-<!-- Basin visits stripe plot --> <figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20191326.png' | relative_url }}" alt="Time-stripe raster showing the sequence of visited basins over the recording" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Basin-visit raster over time.</strong> Colour-coded stripe plot of the visited basin label across the recording. Long same-colour blocks correspond to sustained dwell periods; frequent colour changes indicate rapid switching. This readout complements MFPT and dwell-time summaries by exposing the temporal ordering of visits. </figcaption> </figure>
+<!-- Basin visits stripe plot --> 
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-09-09%20191326.png' | relative_url }}" alt="Time-stripe raster showing the sequence of visited basins over the recording" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Basin-visit raster over time.</strong> Colour-coded stripe plot of the visited basin label across the recording. Long same-colour blocks correspond to sustained dwell periods; frequent colour changes indicate rapid switching. This readout complements MFPT and dwell-time summaries by exposing the temporal ordering of visits. </figcaption> </figure>
+
+
+<!-- Console: fit summary with entropy, gap, Kemeny --> 
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20191723.png' | relative_url }}" alt="Console summary with accuracies, stationary entropy, relaxation times, spectral gap, Kemeny constant" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Model-fit quality and global kinetics.</strong> Reported are fit accuracies, stationary entropy \(H(\pi)\) (spread of state use), slow \(\tau_i\), spectral gap \(\lambda_1-\lambda_2\) (mixing speed), and the Kemeny constant (mean hitting time averaged over targets). Together they summarise how well the model matches the data and how swiftly the brain’s state dynamics explore the landscape. </figcaption> </figure>
+
+
+<!-- Boltzmann rank plot --> 
+<figure class="l-page" style="margin:1.6rem 0"> <img src="{{ '/assets/img/2025-10-25-phase-diagram-playbook/Screenshot%202025-11-01%20191957.png' | relative_url }}" alt="Boltzmann rank plot of empirical probabilities by energy rank with basin colouring and fitted slope" style="width:100%;height:auto;border:1px solid rgba(255,255,255,0.15);border-radius:8px;"> <figcaption style="color:#e5e7eb"> <strong>Boltzmann rank plot (basin-coloured).</strong> Empirical probabilities versus energy rank (log-scale) assess Boltzmann-like ordering: high-probability states sit among the lowest-energy configurations. Basin colours reveal which attractors dominate the high-probability tail; the dashed fit summarises the overall decay. </figcaption> </figure>
+
+
 
 ---
 ## 6) Phase-Diagram Analysis (PDA): multi-observable placement
 
 **Goal:** 
 Place every subject on a *shared* Sherrington–Kirkpatrick‑like $$(\mu,\sigma)$$ phase surface using *multiple* observables at once, with uncertainty, so that cohorts become directly comparable without needing a fixed “healthy baseline”. PDA sits downstream of our shared‑latent → binarisation → Ising (PMEM) fit, and is designed to be robust, auditable, and reproducible from end to end. <d-cite key="edwards1975ea,sherrington1975sk,ezaki2020critical"></d-cite>
+
+<figure class="l-page">
+  <iframe
+    src="{{ '/assets/plotly/2025-10-25-phase-diagram-playbook/3D-PDA.html' | relative_url }}"
+    title="Interactive 3D surface for an example phase diagram metric with cohort-aware placements"
+    loading="lazy"
+    style="width:100%; aspect-ratio: 10 / 10; border:0;"
+    allowfullscreen
+  ></iframe>
+  <figcaption style="color:var(--theme-text, #eaeaea)">
+    <strong>Interactive 3D phase diagram with robust multi-subject positioning - illustrated for C as the example metric </strong>
+      <br><br> 
+    <noscript>
+      <a href="{{ 'assets/plotly/2025-10-25-phase-diagram-playbook/3D-PDA.html' | relative_url }}">
+        Open the interactive figure.
+      </a>
+    </noscript>
+  </figcaption>
+</figure>
 
 ---
 
