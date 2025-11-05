@@ -96,8 +96,10 @@ def check_submission(base_branch: str):
         # If there are changes in the assets directory, ensure they are confined to the right folders
         for file in asset_files:
             # Special case: bibliography files must be at assets/bibliography/{SUBMISSION_KEY}.bib
-            if len(file.parts) >= 2 and file.parts[1] == "bibliography":
-                # Check if it's exactly at assets/bibliography/{SUBMISSION_KEY}.bib
+            # Check if the file is in the bibliography directory
+            if len(file.parts) > 1 and file.parts[1] == "bibliography":
+                # Bibliography files must be at exactly assets/bibliography/{SUBMISSION_KEY}.bib
+                # This means the path should have exactly 3 parts: ['assets', 'bibliography', 'filename.bib']
                 if len(file.parts) != 3:
                     raise Exception(
                         f"Bibliography file must be located at exactly assets/bibliography/{submission_key}.bib (no subdirectories). Found: {file}"
