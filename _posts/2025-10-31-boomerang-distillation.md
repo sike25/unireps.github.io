@@ -82,7 +82,9 @@ Today’s large language models power everything from chatbots on your phone to 
 As training each model size from scratch is very computationally intensive, many modern LLM families start with one large pretrained model (the teacher) and distill it into smaller ones (the students). This procedure is called knowledge distillation. Typically, the student models learn with the usual next-token prediction objective, plus extra losses that make them imitate the teacher’s behavior (e.g. KL divergence and cosine distance). Distillation is more compute-friendly than training every model without a teacher, but it still requires training each model independently on up to a trillion tokens. This expensive process limits how many models developers can release, so we typically end up with a small set tuned for common GPU setups. Meanwhile, practitioners need models tailored to _their_ hardware and compute budgets. Unless they train a new model themselves, they’re limited to a few prebuilt options, leaving large gaps in the trade-off between model compute and performance (Figure 1).
 
 <div class="l-page-outset">
-  ![Landscape of pretrained families](/assets/img/2025-10-31-boomerang-distillation/model_sizes_new.jpeg "Figure 1")
+  {% include figure.liquid loading="eager" path="assets/img/2025-10-31-boomerang-distillation/model_sizes_new.jpeg" class="img-fluid rounded z-depth-1" zoomable=true %}
+  <!-- ![Landscape of pretrained families](/assets/img/2025-10-31-boomerang-distillation/model_sizes_new.jpeg "Figure 1") -->
+  
 </div>
 Figure 1: The landscape of pretrained LLM families. There are large gaps in size between available LLMs. Figure credit to [Qwen research](https://qwen.ai/research)
 
@@ -97,7 +99,8 @@ Intuitively, boomerang distillation works because we encourage each student laye
 Boomerang distillation consists of three key steps: (1) student initialization, (2) knowledge distillation, and (3) student patching (Figure 2). We explain each of these steps in detail below.
 
 <div class="l-page-outset">
-  ![Overview of boomerang distillation](/assets/img/2025-10-31-boomerang-distillation/size_interpolation_v4.jpg "Figure 2")
+  {% include figure.liquid loading="eager" path="assets/img/2025-10-31-boomerang-distillation/size_interpolation_v4.jpg" class="img-fluid rounded z-depth-1" zoomable=true %}
+  <!-- ![Overview of boomerang distillation](/assets/img/2025-10-31-boomerang-distillation/size_interpolation_v4.jpg "Figure 2") -->
 </div>
 Figure 2: Overview of boomerang distillation. ➀ The student model is initialized by copying layers from the pretrained teacher model. ➁ The teacher model is distilled into the student model with cross-entropy loss, knowledge distillation loss, and cosine distance loss. ➂ After training the student model, a block of teacher layers corresponding to a student layer is inserted back into the model to get the interpolated intermediate model.
 
@@ -145,19 +148,22 @@ To probe when boomerang distillation works, we run two simple stress tests. Firs
 We find that across multiple model families and sizes, boomerang distillation creates intermediate models whose **performance interpolates smoothly** between the student and teacher (Figures 3 and 4). In contrast, both baselines’ performance sharply decreases with model size. This shows that **both** ingredients – the right initialization _and_ knowledge distillation – matter. Leave out either step and the boomerang effect largely disappears.
 
 <div class="l-page-outset">
-  ![Boomerang distillation produces models with smooth size–performance interpolation](/assets/img/2025-10-31-boomerang-distillation/qwen_layer_dropping.jpg "Figure 3")
+  {% include figure.liquid loading="eager" path="assets/img/2025-10-31-boomerang-distillation/qwen_layer_dropping.jpg" class="img-fluid rounded z-depth-1" zoomable=true %}
+  <!-- ![Boomerang distillation produces models with smooth size–performance interpolation](/assets/img/2025-10-31-boomerang-distillation/qwen_layer_dropping.jpg "Figure 3") -->
 </div>
 Figure 3: Boomerang distillation produces models with smooth size–performance interpolation, consistently outperforming naive layer pruning and interpolation from randomly initialized distilled models. 
 
 <div class="l-page-outset">
-  ![Boomerang distillation emerges across model families](/assets/img/2025-10-31-boomerang-distillation/all_classification_results.jpg "Figure 4")
+  {% include figure.liquid loading="eager" path="assets/img/2025-10-31-boomerang-distillation/all_classification_results.jpg" class="img-fluid rounded z-depth-1" zoomable=true %}
+  <!-- ![Boomerang distillation emerges across model families](/assets/img/2025-10-31-boomerang-distillation/all_classification_results.jpg "Figure 4") -->
 </div>
 Figure 4: Boomerang distillation emerges across model families like Qwen, Pythia, and Llama. 
 
 We also test which parts of the distillation objective are needed for boomerang distillation. To do so, we train four students with ablated loss terms and then interpolate from them. In Figure 5, we find that for most model sizes, leaving out the per-layer cosine distance (the green and purple lines) does not meaningfully reduce interpolation performance. This suggests that the initialization in Step 1 already provides enough alignment for boomerang distillation to work reasonably well without explicitly training every intermediate layer to match the teacher. That said, students distilled with the per-layer cosine term show more stable interpolation than those without. Looking ahead, we are interested in understanding whether we can keep that stability without explicit layer-wise alignment during distillation, because removing the need to keep the teacher in memory would significantly reduce the GPU footprint of training the student.
 
 <div class="l-page-outset">
-  ![Per-layer loss yields stable and smoother interpolation performance](/assets/img/2025-10-31-boomerang-distillation/qwen_loss_type.jpg "Figure 5")
+  {% include figure.liquid loading="eager" path="assets/img/2025-10-31-boomerang-distillation/qwen_loss_type.jpg" class="img-fluid rounded z-depth-1" zoomable=true %}
+  <!-- ![Per-layer loss yields stable and smoother interpolation performance](/assets/img/2025-10-31-boomerang-distillation/qwen_loss_type.jpg "Figure 5") -->
 </div>
 Figure 5: Per-layer loss yields stable and smoother interpolation performance. 
 
@@ -172,7 +178,8 @@ We find that boomerang distillation creates intermediate models with performance
 We also observe that knowledge distillation can hurt models like Qwen at larger sizes (toward the right of Figure 6), likely because they originate from proprietary, high-quality data; retraining on public data (of presumably lower quality) can cause a drop in performance. With boomerang distillation, we mitigate this issue because we interpolate directly between the student and the teacher.
 
 <div class="l-page-outset">
-  ![Interpolated models have comparable performance to standard distilled models](/assets/img/2025-10-31-boomerang-distillation/qwen_versus_distilled.jpg "Figure 6")
+  {% include figure.liquid loading="eager" path="assets/img/2025-10-31-boomerang-distillation/qwen_versus_distilled.jpg" class="img-fluid rounded z-depth-1" zoomable=true %}
+  <!-- ![Interpolated models have comparable performance to standard distilled models](/assets/img/2025-10-31-boomerang-distillation/qwen_versus_distilled.jpg "Figure 6") -->
 </div>
 Figure 6: Interpolated models produced using boomerang distillation have comparable performance to pretrained and standard distilled models. 
 
@@ -183,7 +190,8 @@ How does boomerang distillation compare to smart layer pruning methods? Layer Co
 In practice, boomerang distillation exhibits much better performance. As Figure 7 shows, its interpolated models consistently outperform layer-pruned models of the same size, and the gap widens as models get smaller. This is likely because boomerang distillation blends information from **both** the distilled student and the original teacher, so the intermediate models can use information from both models. Pruning, by contrast, compresses only the teacher; once you shrink far below the teacher’s size, quality tends to fall off.
 
 <div class="l-page-outset">
-  ![Boomerang distillation outperforms layer pruning methods](/assets/img/2025-10-31-boomerang-distillation/qwen_pruning_method_comparison.jpg "Figure 7")
+  {% include figure.liquid loading="eager" path="assets/img/2025-10-31-boomerang-distillation/qwen_pruning_method_comparison.jpg" class="img-fluid rounded z-depth-1" zoomable=true %}
+  <!-- ![Boomerang distillation outperforms layer pruning methods](/assets/img/2025-10-31-boomerang-distillation/qwen_pruning_method_comparison.jpg "Figure 7") -->
 </div>
 Figure 7: Boomerang distillation performs significantly better than layer pruning methods.
 
