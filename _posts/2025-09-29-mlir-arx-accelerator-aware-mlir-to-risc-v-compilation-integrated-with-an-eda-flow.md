@@ -6,14 +6,14 @@ categories: [mlir, compiler, deep-learning]
 featured: true
 
 authors:
-  - name: JooHyoung Cha
-    url: "https://orcid.org/0009-0008-2123-454X"
-    affiliations:
-      name: University of Science and Technology, Republic of Korea
   - name: Yongin Kwon
     url: "https://orcid.org/0000-0003-2973-246X"
     affiliations:
       name: Electronics and Telecommunications Research Institute, Republic of Korea
+  - name: JooHyoung Cha
+    url: "https://orcid.org/0009-0008-2123-454X"
+    affiliations:
+      name: University of Science and Technology, Republic of Korea
 
 bibliography: 2025-09-29-mlir-arx-accelerator-aware-mlir-to-risc-v-compilation-integrated-with-an-eda-flow.bib
 
@@ -591,5 +591,9 @@ For reproducibility and debugging, [Table 4](#mnist-shapes) lists the operator s
   </tbody>
 </table>
 
+---
 
+# Acknowledgments
+
+This work was supported by the Institute of Information \& Communications Technology Planning \& Evaluation (IITP)grant funded by the Korea government (MSIT) (No.RS-2024-00459797, No.RS-2023-00277060, No.RS-2025-02217404, No.RS-2025-02214497, No.RS-2025-02216517)
 
