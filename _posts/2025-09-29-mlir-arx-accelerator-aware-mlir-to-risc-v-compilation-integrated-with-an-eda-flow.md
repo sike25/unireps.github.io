@@ -36,7 +36,8 @@ toc:
 
 **TLDR**
 
-Deploying AI models on heterogeneous RISC-V systems requires not only partitioning computation between CPU and accelerator, but also identifying which operations to accelerate when hardware capabilities evolve. We present `mlir-arx`, a profile-guided compiler built on MLIR that introduces an `arx` dialect to encode accelerator constraints, inserts lightweight profiling operations via dedicated passes, and applies a two-stage (analytic + profile-guided) cost model to form maximal offload regions under resource and dependency limits. Early evaluation on a small MNIST CNN with a configurable VTA accelerator on a Genesis FPGA prototype demonstrates that the compile--measure loop identifies profitable regions and achieves significant end-to-end speedups over the CPU-only baseline.
+Heterogeneous RISC-V systems challenge us to keep model representations coherent while deciding what to accelerate as hardware evolves. `mlir-arx` treats MLIR as a unifying representation layer: we introduce an `arx` dialect that encodes accelerator capabilities, inject lightweight profiling ops, and use a two-stage (analytic + profile-guided) cost model to form maximal offload regions under resource and dependency constraints. By aligning model computations across CPU and accelerators in a single IR space, our compile–-measure loop reliably selects profitable regions and delivers substantial end-to-end speedups on a MNIST CNN with a configurable VTA overlay on a Genesis FPGA prototype.
+
  
 Availability. Source code and artifacts are available at: [Repository in Our Gitlab](https://gitlab.com/ones-ai/mlir-arx)
 
@@ -44,7 +45,8 @@ Availability. Source code and artifacts are available at: [Repository in Our Git
 
 # **1. Introduction**
 
-Edge and embedded AI systems increasingly pair general-purpose RISC-V cores with domain accelerators (from NPUs to lightweight tensor engines) to meet latency and energy targets<d-cite key="jouppi2017tpu, eyeriss2016, nvdla2019"/>. In such settings, the practical challenge is not only to partition a model across CPU and accelerator boundaries but also to decide what to accelerate when accelerator capabilities may be unknown or evolving at project start. A sensible path is to begin from a CPU-only baseline, profile real executions, and then offload the most profitable regions subject to resource and orchestration constraints.
+
+Edge and embedded AI systems increasingly pair general-purpose RISC-V cores with domain accelerators (from NPUs to lightweight tensor engines) to meet stringent latency and energy targets<d-cite key="jouppi2017tpu, eyeriss2016, nvdla2019"/>. In such settings, the practical challenge is not only to partition a model across CPU and accelerator boundaries, but also to decide what to accelerate when device capabilities are unknown or evolving at project start. A sensible path is to begin from a CPU-only baseline, profile real executions, and then offload the most profitable regions subject to resource and orchestration constraints. In this work we cast that workflow as a problem of representation alignment: by expressing computations in a common intermediate representation (MLIR), we keep the model’s computational structure coherent across heterogeneous RISC-V–attached devices while letting profiling and cost models determine which aligned regions should migrate to accelerators.
 
 MLIR's multi-dialect design and progressive lowering are a natural fit for this workflow<d-cite key="mlir"/>. However, turning it into an end-to-end solution for RISC-V SoCs requires additional pieces: 
 
